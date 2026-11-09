@@ -1,4 +1,4 @@
-# cantiere-preventivi-ai
+# preventivi-ai
 
 Strumento per aiutare una piccola impresa edile a preparare preventivi e
 consuntivi dettandoli a voce, invece di scriverli e impaginarli a mano in
