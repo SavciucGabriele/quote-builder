@@ -1,0 +1,21 @@
+# Chiavi e credenziali
+.env
+
+# Documenti veri dei cantieri: mai su GitHub
+data/raw/
+output/
+*.docx
+*.xlsx
+*.pdf
+
+# Eccezioni: modelli ed esempi inventati, che invece servono
+!data/templates/**
+!examples/**
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Mac
+.DS_Store
