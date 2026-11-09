@@ -29,3 +29,8 @@ nuovo ingresso non tocca il resto.
 Dall'analisi di 14 preventivi: modello unico, voci quasi sempre a corpo, ed è
 lì che nascono gli errori di somma e di formato. Gli Excel dei tecnici hanno
 impaginazioni diverse tra loro e vengono dopo.
+
+## 2026-11-10 — Nei dati va il testo pulito, e il titolo senza il tipo
+Le descrizioni si salvano già corrette, perché il Word viene rigenerato dai
+dati e un refuso si ristamperebbe a ogni versione. Il titolo non contiene
+"Preventivo" o "Consuntivo": lo aggiunge lo script leggendo il campo "tipo".

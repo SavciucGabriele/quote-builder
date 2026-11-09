@@ -1,0 +1,28 @@
+{
+  "tipo": "preventivo",
+  "cliente": "Mario Rossi",
+  "indirizzo": "Via Roma 1, Milano",
+  "titolo": "Rifacimento bagno",
+  "data": "2026-11-10",
+  "voci": [
+    {
+      "descrizione": "Copertura di protezione pavimenti e mobili, pulizia finale",
+      "importo": 200
+    },
+    {
+      "descrizione": "Rimozione sanitari e rivestimento esistente, carico e trasporto alle discariche autorizzate",
+      "importo": 650
+    },
+    {
+      "descrizione": "Fornitura e posa piastrelle a pavimento",
+      "quantita": 6,
+      "unita": "mq",
+      "prezzo_unitario": 55
+    },
+    {
+      "descrizione": "Fornitura e posa box doccia",
+      "importo": 700,
+      "nota": "stima"
+    }
+  ]
+}
