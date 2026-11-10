@@ -58,3 +58,25 @@ arrotondato in su.
 Un documento già creato non viene mai sovrascritto (max.docx, max-2.docx...),
 così una correzione fatta a mano non va persa. Il titolo viene stampato com'è
 scritto nei dati, senza toccare maiuscole e minuscole.
+
+## 2026-11-10 — L'ingresso è una conversazione, non una dettatura unica
+Dalle sue chat con ChatGPT: manda messaggi brevi, risponde alle domande e
+corregge i dati strada facendo (25 metri diventano 28). Lo strumento terrà un
+preventivo in bozza e lo aggiornerà a ogni messaggio: un dato nuovo sostituisce
+quello vecchio, e l'elenco delle cose mancanti diventa la lista delle domande.
+
+## 2026-11-10 — Le descrizioni non aggiungono lavorazioni
+Il modello può scrivere descrizioni complete, prendendo come esempio quelle già
+usate, ma non aggiunge lavorazioni non nominate: in un preventivo ogni cosa
+descritta è un impegno con il cliente. Prima del documento finale la bozza
+viene sempre mostrata.
+
+## 2026-11-10 — I prezzi li mette il titolare, lo strumento ricorda quelli passati
+Il titolare usa ChatGPT solo per farsi un'idea dei prezzi di mercato, poi mette
+i suoi. Lo strumento non stima prezzi: suggerisce quelli già usati per lavori
+simili, presi dall'archivio; se non ce ne sono, la casella resta "da definire".
+
+## 2026-11-10 — Il valore principale è la scrittura professionale
+Il titolare fatica con la lingua: la parte più utile è trasformare quello che
+dice in descrizioni da preventivo, nello stile dei suoi documenti, prendendoli
+come esempio e senza aggiungere lavorazioni non nominate.
