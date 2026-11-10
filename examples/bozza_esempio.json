@@ -1,0 +1,30 @@
+{
+  "tipo": "preventivo",
+  "cliente": "Anna Bianchi",
+  "indirizzo": "Via Verdi 5, Monza",
+  "titolo": "installazione condizionatore",
+  "data": "2026-11-10",
+  "voci": [
+    {
+      "descrizione": "Installazione unità interna ed esterna, collaudo compreso",
+      "importo": 900
+    },
+    {
+      "descrizione": "Fornitura condizionatore modello A",
+      "importo": 1500
+    },
+    {
+      "descrizione": "Fornitura condizionatore modello B",
+      "importo": 1800,
+      "alternativa": true
+    },
+    {
+      "descrizione": "Formazione velette in cartongesso",
+      "quantita": 4.5,
+      "unita": "ml"
+    },
+    {
+      "descrizione": "Imbiancatura locale"
+    }
+  ]
+}

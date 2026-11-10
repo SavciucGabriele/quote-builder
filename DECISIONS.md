@@ -42,3 +42,19 @@ o aggiungere un logo si modifica il modello in Word, senza toccare il codice.
 I dati dell'impresa stanno in un file a parte non pubblicato; se manca, lo
 script usa quelli di esempio.
 
+## 2026-11-10 — Errori e mancanze sono due cose diverse
+Un file scritto male (campo sconosciuto, numero come testo, importo e quantità
+insieme) ferma lo script: è un errore di chi ha prodotto il file. Un dato che
+manca (prezzo, cliente) è normale quando si detta, quindi il documento viene
+creato lo stesso come BOZZA, con l'elenco di cosa completare. Quell'elenco
+servirà poi per fare le domande a chi ha dettato.
+
+## 2026-11-10 — I conti si fanno in decimali esatti
+I numeri normali di Python sono approssimati e sbagliavano di un centesimo in
+alcuni prodotti quantità per prezzo. Si usa Decimal, con il mezzo centesimo
+arrotondato in su.
+
+## 2026-11-10 — Lo script non sovrascrive e non corregge i testi
+Un documento già creato non viene mai sovrascritto (max.docx, max-2.docx...),
+così una correzione fatta a mano non va persa. Il titolo viene stampato com'è
+scritto nei dati, senza toccare maiuscole e minuscole.

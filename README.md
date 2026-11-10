@@ -48,6 +48,21 @@ python genera_preventivo.py examples/preventivo_esempio.json
 
 Il documento viene creato nella cartella `output/`.
 
+Prima di generare, lo script controlla i dati. Se il file contiene errori
+(un campo scritto male, un numero tra virgolette) si ferma e li elenca. Se
+manca qualcosa, per esempio un prezzo, crea comunque il documento come BOZZA,
+con i dati mancanti evidenziati:
+
+```bash
+python genera_preventivo.py examples/bozza_esempio.json
+```
+
+Per lanciare i test:
+
+```bash
+python -m pytest
+```
+
 ## Dati
 
 Il repository non contiene documenti, clienti o prezzi reali: gli esempi
