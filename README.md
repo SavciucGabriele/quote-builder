@@ -29,13 +29,24 @@ usato per lavorazioni simili in passato, ma non lo inventa. I calcoli
 (importi, totali, IVA) li fa il codice, non il modello linguistico.
 
 ## A che punto è
-
-- [ ] Generare un preventivo impaginato da una lista di voci
+**Stato: in sviluppo. Per ora genera il documento Word a partire da un file di dati.**
+- [x] Generare un preventivo impaginato da una lista di voci
 - [ ] Ricavare la lista di voci da un testo
 - [ ] Trascrivere un vocale
 - [ ] Archivio delle voci e suggerimento dei prezzi
 - [ ] Compilazione degli Excel ricevuti
 - [ ] Uso dal telefono
+
+## Come si usa
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python genera_preventivo.py examples/preventivo_esempio.json
+```
+
+Il documento viene creato nella cartella `output/`.
 
 ## Dati
 

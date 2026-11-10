@@ -34,3 +34,11 @@ impaginazioni diverse tra loro e vengono dopo.
 Le descrizioni si salvano già corrette, perché il Word viene rigenerato dai
 dati e un refuso si ristamperebbe a ogni versione. Il titolo non contiene
 "Preventivo" o "Consuntivo": lo aggiunge lo script leggendo il campo "tipo".
+
+## 2026-11-10 — Modello Word e dati dell'impresa fuori dal codice
+L'impaginazione sta in un file Word con segnaposto come {{cliente}}; lo script
+li riempie e aggiunge le righe della tabella. Per cambiare caratteri, larghezze
+o aggiungere un logo si modifica il modello in Word, senza toccare il codice.
+I dati dell'impresa stanno in un file a parte non pubblicato; se manca, lo
+script usa quelli di esempio.
+
