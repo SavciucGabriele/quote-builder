@@ -14,6 +14,7 @@ Prima di generare, lo script controlla i dati:
 """
 
 import json
+import math
 import sys
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -62,7 +63,9 @@ def manca(dizionario, campo):
 
 def e_un_numero(valore):
     """Dice se un valore è un numero vero (320 oppure 8.5) e non un testo come "320"."""
-    return isinstance(valore, (int, float)) and not isinstance(valore, bool)    # isinstance controlla il tipo; escludo True/False perché per Python sono anche loro numeri (1 e 0)
+    if isinstance(valore, bool) or not isinstance(valore, (int, float)):   # isinstance controlla il tipo; escludo True/False perché per Python sono anche loro numeri (1 e 0)
+        return False
+    return math.isfinite(valore)    # Esclude anche NaN e Infinity ("non è un numero" e "infinito"), che il JSON di Python accetta ma con cui non si possono fare conti
 
 
 def decimale(numero):
@@ -256,6 +259,20 @@ def controlla_preventivo(preventivo):
     return errori, mancanze
 
 
+def controlla_impresa(impresa):
+    """Controlla il file con i dati dell'impresa. Restituisce una lista di errori (vuota se va tutto bene)."""
+    if not isinstance(impresa, dict):
+        return ["Il file dei dati dell'impresa deve essere scritto tra parentesi graffe { }"]
+    errori = []
+    for campo in CAMPI_IMPRESA:
+        if manca(impresa, campo):
+            errori.append(f'Nel file dei dati dell\'impresa manca "{campo}"')
+        elif not isinstance(impresa[campo], str):
+            # Capita con il telefono scritto senza virgolette: per il JSON diventa un numero, e Word vuole un testo.
+            errori.append(f'Nel file dei dati dell\'impresa "{campo}" deve essere un testo tra virgolette (es. "02 0000000")')
+    return errori                   # Output: una lista di frasi, es. [] oppure ['Nel file dei dati dell\'impresa manca "telefono"']
+
+
 # ---------------------------------------------------------------------------
 # Funzioni che scrivono nel documento Word
 # ---------------------------------------------------------------------------
@@ -359,9 +376,7 @@ def main():
 
     # 0. Controllo dei dati, prima di toccare Word
     errori, mancanze = controlla_preventivo(preventivo)
-    for campo in CAMPI_IMPRESA:
-        if manca(impresa, campo):
-            errori.append(f'Nel file dei dati dell\'impresa manca "{campo}"')
+    errori += controlla_impresa(impresa)    # Aggiunge in fondo gli eventuali errori del file dell'impresa
     if errori:
         print(f"Il documento NON è stato creato. Errori da correggere in {percorso}:")
         for errore in errori:

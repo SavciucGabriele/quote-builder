@@ -14,6 +14,7 @@ from decimal import Decimal
 from genera_preventivo import (
     DA_DEFINIRE,
     celle_voce,
+    controlla_impresa,
     controlla_preventivo,
     euro,
     importo_voce,
@@ -188,6 +189,31 @@ def test_tipo_sconosciuto_e_un_errore():
     preventivo["tipo"] = "fattura"
     errori, _ = controlla_preventivo(preventivo)
     assert len(errori) == 1
+
+
+def test_importo_non_finito_e_un_errore():
+    preventivo = preventivo_valido()
+    preventivo["voci"][0]["importo"] = float("nan")     # NaN: il "non numero" che il JSON di Python accetta
+    errori, _ = controlla_preventivo(preventivo)
+    assert len(errori) == 1
+    assert "deve essere un numero" in errori[0]
+
+
+def test_impresa_valida_non_ha_errori():
+    impresa = {"nome": "Impresa Edile Esempio", "indirizzo": "Via Milano 10", "telefono": "02 0000000", "partita_iva": "00000000000"}
+    assert controlla_impresa(impresa) == []
+
+
+def test_impresa_telefono_senza_virgolette_e_un_errore():
+    impresa = {"nome": "Impresa Edile Esempio", "indirizzo": "Via Milano 10", "telefono": 20000000, "partita_iva": "00000000000"}
+    errori = controlla_impresa(impresa)
+    assert len(errori) == 1
+    assert '"telefono"' in errori[0]
+
+
+def test_impresa_campo_mancante_e_un_errore():
+    errori = controlla_impresa({"nome": "Impresa Edile Esempio", "indirizzo": "Via Milano 10"})
+    assert len(errori) == 2     # mancano telefono e partita IVA
 
 
 # ---------------------------------------------------------------------------
