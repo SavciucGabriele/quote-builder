@@ -19,3 +19,7 @@ __pycache__/
 
 # Mac
 .DS_Store
+
+# Esportazione di ChatGPT: contiene tutte le chat dell'account
+conversations.json
+chat.html
