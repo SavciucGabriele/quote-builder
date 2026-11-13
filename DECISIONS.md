@@ -80,3 +80,21 @@ simili, presi dall'archivio; se non ce ne sono, la casella resta "da definire".
 Il titolare fatica con la lingua: la parte più utile è trasformare quello che
 dice in descrizioni da preventivo, nello stile dei suoi documenti, prendendoli
 come esempio e senza aggiungere lavorazioni non nominate.
+
+## 2026-11-13 — Lo strumento propone, non inserisce
+Rivede la decisione del 10/11 sulle descrizioni. Nel documento entra solo ciò
+che il titolare ha detto o confermato. Lo strumento può però proporre: voci
+che ricorrono nei suoi preventivi (es. la copertura di protezione), prezzi già
+usati per lavori simili, dettagli tipici di una lavorazione. Ogni proposta va
+confermata prima di entrare nella bozza.
+
+## 2026-11-13 — Una domanda alla volta, e solo se serve al documento
+Nelle chat con ChatGPT il titolare non risponde agli elenchi di domande
+("Si grazie" a tre domande), mentre risponde sempre a una domanda singola.
+Lo strumento chiede una cosa per volta. Le misure si scrivono come le dice lui
+("25 mt"), senza indovinare se sono metri lineari, quadri o cubi.
+
+## 2026-11-13 — I messaggi possono essere comandi sulla bozza
+Oltre ad aggiungere o correggere un dato, un messaggio può chiedere una
+modifica a tutta la bozza ("aumenta di 20%"). Il modello riconosce il comando,
+il conto lo fa il codice.
