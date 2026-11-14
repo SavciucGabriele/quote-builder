@@ -98,3 +98,17 @@ Lo strumento chiede una cosa per volta. Le misure si scrivono come le dice lui
 Oltre ad aggiungere o correggere un dato, un messaggio può chiedere una
 modifica a tutta la bozza ("aumenta di 20%"). Il modello riconosce il comando,
 il conto lo fa il codice.
+
+## 2026-11-14 — Modulo guidato al posto della conversazione
+Deciso con il titolare. Per prezzi e consigli continua a usare ChatGPT; il
+nostro programma serve a compilare e impaginare. L'interfaccia è una pagina
+con i campi in ordine (spettabile, data, luogo, poi per ogni voce descrizione,
+a corpo o a metri, prezzo). Ogni campo si può dettare o scrivere a mano.
+Sostituisce le decisioni del 10/11 e del 13/11 su conversazione, domande e
+comandi sulla bozza.
+
+## 2026-11-14 — Chi tocca cosa
+Il nome del cliente resta esattamente come viene scritto. Prezzi e indirizzi
+li sistema il codice (da "593€" a "€ 593,00"), senza modello. Al modello
+linguistico arriva solo la descrizione dei lavori, e solo quando si chiede di
+sistemare il testo: nomi, indirizzi e prezzi non gli vengono mai mandati.
