@@ -22,6 +22,7 @@
     textarea { min-height: 84px; resize: vertical; }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--blu); outline-offset: 1px; }
     .due { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .quantita-unita { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }   /* La quantità è un numero corto: l'unità prende due terzi, così "mq (metri quadrati)" si legge intero */
     .nascosto { display: none; }
     .dettaglio { font-size: 15px; color: var(--grigio); margin: 10px 0 0; min-height: 1.4em; }
     button { font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
@@ -98,15 +99,31 @@
       <option value="misura">A misura (mq, mt, pezzi...)</option>
     </select>
 
-    <div class="due solo-misura nascosto">
+    <div class="due quantita-unita solo-misura nascosto">
       <div>
         <label>Quantità</label>
         <input class="quantita" inputmode="decimal" autocomplete="off" placeholder="es. 25">
       </div>
       <div>
         <label>Unità</label>
-        <input class="unita" list="elenco-unita" autocomplete="off" placeholder="es. mq">
+        <!-- value è quello che finisce nel Word (corto), il testo dopo è quello che si legge nel menu -->
+        <select class="unita">
+          <option value="">Scegli...</option>
+          <option value="mq">mq (metri quadrati)</option>
+          <option value="mt">mt (metri)</option>
+          <option value="ml">ml (metri lineari)</option>
+          <option value="mc">mc (metri cubi)</option>
+          <option value="pz">pz (pezzi)</option>
+          <option value="ore">ore</option>
+          <option value="altra">Altra unità...</option>
+        </select>
       </div>
+    </div>
+
+    <!-- Compare solo se nel menu si sceglie "Altra unità...": qui si può scrivere o dettare -->
+    <div class="solo-altra nascosto">
+      <label>Quale unità?</label>
+      <input class="altra-unita" autocomplete="off" placeholder="es. kg">
     </div>
 
     <div class="due">
@@ -126,10 +143,6 @@
     <p class="dettaglio"></p>
   </section>
 </template>
-
-<datalist id="elenco-unita">
-  <option value="mq"><option value="mt"><option value="ml"><option value="mc"><option value="pz"><option value="ore">
-</datalist>
 
 <script>
   // Questa parte è scritta in JavaScript, il linguaggio che gira dentro il browser.
@@ -157,6 +170,15 @@
   function mostraCampiMisura(voce) {
     const aMisura = voce.querySelector(".misura").value === "misura";
     voce.querySelectorAll(".solo-misura").forEach(pezzo => pezzo.classList.toggle("nascosto", !aMisura));
+    const altra = aMisura && voce.querySelector(".unita").value === "altra";            // La casella "Quale unità?" serve solo con "Altra unità..."
+    voce.querySelector(".solo-altra").classList.toggle("nascosto", !altra);
+  }
+
+  // L'unità della voce: quella scelta nel menu, oppure quella scritta a mano se si è scelto "Altra unità...".
+  // Restituisce per esempio "mq", "kg", oppure "" se non è stata scelta.
+  function unitaScelta(voce) {
+    const menu = voce.querySelector(".unita").value;
+    return menu === "altra" ? voce.querySelector(".altra-unita").value : menu;
   }
 
   // Raccoglie quello che è scritto in tutte le caselle, nella forma che si aspetta app.py.
@@ -169,7 +191,7 @@
         descrizione: voce.querySelector(".descrizione").value,
         misura: voce.querySelector(".misura").value,
         quantita: voce.querySelector(".quantita").value,
-        unita: voce.querySelector(".unita").value,
+        unita: unitaScelta(voce),
         prezzo: voce.querySelector(".prezzo").value,
         tipo_prezzo: voce.querySelector(".tipo-prezzo").value,
       })),
@@ -209,7 +231,7 @@
 
     // Le righe vuote Python le salta: qui si abbinano le risposte alle sole voci compilate.
     const compilate = [...voci.querySelectorAll(".voce")].filter(voce =>
-      [".descrizione", ".quantita", ".unita", ".prezzo"].some(nome => voce.querySelector(nome).value.trim() !== ""));
+      [".descrizione", ".quantita", ".prezzo"].some(nome => voce.querySelector(nome).value.trim() !== "") || unitaScelta(voce).trim() !== "");
     voci.querySelectorAll(".dettaglio").forEach(riga => riga.textContent = "");
     compilate.forEach((voce, posizione) => {
       const riga = dati.voci[posizione];
