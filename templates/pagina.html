@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuovo preventivo</title>
+  <link rel="icon" href="data:,">
+  <style>
+    /* L'aspetto della pagina. Le misure sono pensate prima per il telefono:
+       caselle larghe quanto lo schermo e scritte grandi, facili da toccare. */
+    :root { --blu: #1f3a5f; --grigio: #5b6470; --bordo: #cfd6de; --sfondo: #f4f6f8; --rosso: #b42318; --giallo: #fff4ce; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sfondo); color: #1a1f26; font: 17px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 16px 16px 120px; }
+    h1 { font-size: 24px; margin: 8px 0 4px; color: var(--blu); }
+    .aiuto { color: var(--grigio); font-size: 15px; margin: 0 0 16px; }
+    .scheda { background: #fff; border: 1px solid var(--bordo); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .scheda h2 { font-size: 17px; margin: 0 0 10px; color: var(--blu); display: flex; justify-content: space-between; align-items: center; }
+    label { display: block; font-size: 14px; font-weight: 600; color: var(--grigio); margin: 12px 0 4px; }
+    label:first-child { margin-top: 0; }
+    input, select, textarea { width: 100%; font: inherit; padding: 11px 12px; border: 1px solid var(--bordo); border-radius: 8px; background: #fff; color: inherit; }
+    textarea { min-height: 84px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--blu); outline-offset: 1px; }
+    .due { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .nascosto { display: none; }
+    .dettaglio { font-size: 15px; color: var(--grigio); margin: 10px 0 0; min-height: 1.4em; }
+    button { font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
+    .secondario { background: #fff; color: var(--blu); border: 1px solid var(--blu); width: 100%; }
+    .togli { background: none; border: none; color: var(--rosso); padding: 4px 0; font-size: 14px; }
+    .principale { background: var(--blu); color: #fff; border: 1px solid var(--blu); }
+    .avviso { border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 15px; }
+    .avviso ul { margin: 6px 0 0; padding-left: 20px; }
+    .errori { background: #fde8e6; color: var(--rosso); }
+    .mancanze { background: var(--giallo); color: #5c4400; }
+    .fatto { background: #e3f4e5; color: #1d5a27; }
+    /* La barra in fondo resta sempre visibile mentre si scorre: mostra il totale e il pulsante. */
+    .barra { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--bordo); }
+    .barra div { max-width: 720px; margin: 0 auto; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .totale { font-size: 14px; color: var(--grigio); }
+    .totale strong { display: block; font-size: 20px; color: #1a1f26; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Nuovo preventivo</h1>
+  <p class="aiuto">Compila le caselle dall'alto in basso. Puoi scrivere oppure dettare con il microfono della tastiera.</p>
+
+  <div id="messaggi"></div>
+
+  <section class="scheda">
+    <label for="cliente">Spettabile</label>
+    <input id="cliente" autocomplete="off" placeholder="Nome del cliente, scritto come deve comparire">
+
+    <div class="due">
+      <div>
+        <label for="data">Data</label>
+        <input id="data" type="date" value="{{ oggi }}">
+      </div>
+      <div>
+        <label for="tipo">Documento</label>
+        <select id="tipo">
+          <option value="preventivo">Preventivo</option>
+          <option value="consuntivo">Consuntivo</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="indirizzo">Luogo</label>
+    <input id="indirizzo" autocomplete="off" placeholder="es. via ponte 33 cernusco sul naviglio milano">
+
+    <label for="titolo">Lavoro</label>
+    <input id="titolo" autocomplete="off" placeholder="es. sostituzione vasca in doccia">
+  </section>
+
+  <div id="voci"></div>
+
+  <button type="button" class="secondario" id="aggiungi">+ Aggiungi voce</button>
+</main>
+
+<div class="barra">
+  <div>
+    <span class="totale">Totale<strong id="totale">€ 0,00 + IVA</strong></span>
+    <button type="button" class="principale" id="crea">Crea il preventivo</button>
+  </div>
+</div>
+
+<!-- Il modello di una voce. Non si vede: viene copiato ogni volta che si preme "Aggiungi voce". -->
+<template id="modello-voce">
+  <section class="scheda voce">
+    <h2><span class="numero">Voce</span><button type="button" class="togli">Togli</button></h2>
+
+    <label>Descrizione</label>
+    <textarea class="descrizione" placeholder="Cosa viene fatto"></textarea>
+
+    <label>Misura</label>
+    <select class="misura">
+      <option value="corpo">A corpo</option>
+      <option value="misura">A misura (mq, mt, pezzi...)</option>
+    </select>
+
+    <div class="due solo-misura nascosto">
+      <div>
+        <label>Quantità</label>
+        <input class="quantita" inputmode="decimal" autocomplete="off" placeholder="es. 25">
+      </div>
+      <div>
+        <label>Unità</label>
+        <input class="unita" list="elenco-unita" autocomplete="off" placeholder="es. mq">
+      </div>
+    </div>
+
+    <div class="due">
+      <div>
+        <label>Prezzo</label>
+        <input class="prezzo" inputmode="decimal" autocomplete="off" placeholder="es. 593">
+      </div>
+      <div class="solo-misura nascosto">
+        <label>Il prezzo è</label>
+        <select class="tipo-prezzo">
+          <option value="totale">il totale</option>
+          <option value="unitario">per unità</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="dettaglio"></p>
+  </section>
+</template>
+
+<datalist id="elenco-unita">
+  <option value="mq"><option value="mt"><option value="ml"><option value="mc"><option value="pz"><option value="ore">
+</datalist>
+
+<script>
+  // Questa parte è scritta in JavaScript, il linguaggio che gira dentro il browser.
+  // Fa solo tre cose: aggiunge e toglie le voci, manda a Python quello che è scritto
+  // nelle caselle, e mostra quello che Python risponde. Nessun calcolo viene fatto qui.
+
+  const voci = document.getElementById("voci");            // Il contenitore di tutte le voci
+  const messaggi = document.getElementById("messaggi");    // Dove compaiono errori e avvisi
+
+  // Copia il modello di una voce e lo aggiunge in fondo.
+  function aggiungiVoce() {
+    const copia = document.getElementById("modello-voce").content.cloneNode(true);
+    voci.appendChild(copia);
+    rinumera();
+  }
+
+  // Riscrive "Voce 1", "Voce 2"... dopo che se ne aggiunge o toglie una.
+  function rinumera() {
+    voci.querySelectorAll(".voce").forEach((voce, posizione) => {
+      voce.querySelector(".numero").textContent = "Voce " + (posizione + 1);
+    });
+  }
+
+  // Mostra quantità, unità e tipo di prezzo solo quando la voce è a misura.
+  function mostraCampiMisura(voce) {
+    const aMisura = voce.querySelector(".misura").value === "misura";
+    voce.querySelectorAll(".solo-misura").forEach(pezzo => pezzo.classList.toggle("nascosto", !aMisura));
+  }
+
+  // Raccoglie quello che è scritto in tutte le caselle, nella forma che si aspetta app.py.
+  function leggiModulo() {
+    const testo = id => document.getElementById(id).value;
+    return {
+      tipo: testo("tipo"), cliente: testo("cliente"), data: testo("data"),
+      indirizzo: testo("indirizzo"), titolo: testo("titolo"),
+      voci: [...voci.querySelectorAll(".voce")].map(voce => ({
+        descrizione: voce.querySelector(".descrizione").value,
+        misura: voce.querySelector(".misura").value,
+        quantita: voce.querySelector(".quantita").value,
+        unita: voce.querySelector(".unita").value,
+        prezzo: voce.querySelector(".prezzo").value,
+        tipo_prezzo: voce.querySelector(".tipo-prezzo").value,
+      })),
+    };
+  }
+
+  // Manda il modulo a Python e restituisce la risposta.
+  async function chiedi(indirizzo) {
+    const risposta = await fetch(indirizzo, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(leggiModulo()),
+    });
+    return { ok: risposta.ok, dati: await risposta.json() };
+  }
+
+  // Scrive un riquadro colorato con un titolo e un elenco di frasi.
+  function riquadro(tipo, titolo, frasi) {
+    const div = document.createElement("div");
+    div.className = "avviso " + tipo;
+    div.append(titolo);
+    if (frasi.length) {
+      const elenco = document.createElement("ul");
+      frasi.forEach(frase => { const riga = document.createElement("li"); riga.textContent = frase; elenco.appendChild(riga); });
+      div.appendChild(elenco);
+    }
+    return div;
+  }
+
+  // Chiede a Python totali e testi sistemati, e li mostra.
+  // "casella" è la casella appena lasciata: solo quella viene riscritta, per non disturbare mentre si scrive altrove.
+  async function aggiorna(casella) {
+    const { dati } = await chiedi("/anteprima");
+    document.getElementById("totale").textContent = dati.totale;
+
+    if (casella && casella.id === "indirizzo") casella.value = dati.indirizzo;      // "via ponte 33 cernusco milano" -> "Via Ponte 33, Cernusco, MI"
+
+    // Le righe vuote Python le salta: qui si abbinano le risposte alle sole voci compilate.
+    const compilate = [...voci.querySelectorAll(".voce")].filter(voce =>
+      [".descrizione", ".quantita", ".unita", ".prezzo"].some(nome => voce.querySelector(nome).value.trim() !== ""));
+    voci.querySelectorAll(".dettaglio").forEach(riga => riga.textContent = "");
+    compilate.forEach((voce, posizione) => {
+      const riga = dati.voci[posizione];
+      if (!riga) return;
+      voce.querySelector(".dettaglio").textContent = riga.dettaglio;
+      const prezzo = voce.querySelector(".prezzo");
+      if (casella === prezzo && riga.prezzo) prezzo.value = riga.prezzo;             // "593€" -> "€ 593,00"
+    });
+
+    // Gli errori si mostrano solo se riguardano qualcosa di scritto male: "non c'è nessuna voce" all'inizio sarebbe solo fastidioso.
+    messaggi.replaceChildren();
+    const scrittiMale = dati.errori.filter(frase => frase.startsWith("Voce"));
+    if (scrittiMale.length) messaggi.appendChild(riquadro("errori", "Da correggere:", scrittiMale));
+  }
+
+  // Crea il Word. Se Python risponde con degli errori li mostra, altrimenti fa partire lo scaricamento.
+  async function crea() {
+    const { ok, dati } = await chiedi("/crea");
+    messaggi.replaceChildren();
+    if (!ok) {
+      messaggi.appendChild(riquadro("errori", "Il preventivo non è stato creato. Da correggere:", dati.errori));
+    } else {
+      if (dati.bozza) messaggi.appendChild(riquadro("mancanze", "Creato come BOZZA. Mancano ancora:", dati.mancanze));
+      else messaggi.appendChild(riquadro("fatto", "Preventivo creato: " + dati.file + " (" + dati.totale + ")", []));
+      window.location = "/scarica/" + encodeURIComponent(dati.file);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });     // Torna in cima, dove sta il messaggio
+  }
+
+  // Cosa succede quando si tocca qualcosa.
+  document.getElementById("aggiungi").addEventListener("click", aggiungiVoce);
+  document.getElementById("crea").addEventListener("click", crea);
+  voci.addEventListener("click", evento => {
+    if (evento.target.classList.contains("togli")) { evento.target.closest(".voce").remove(); rinumera(); aggiorna(); }
+  });
+  // "change" scatta quando si esce da una casella dopo averla modificata, o si cambia una scelta.
+  document.addEventListener("change", evento => {
+    const voce = evento.target.closest(".voce");
+    if (voce) mostraCampiMisura(voce);
+    aggiorna(evento.target);
+  });
+
+  aggiungiVoce();     // Si parte con una voce già pronta
+</script>
+</body>
+</html>

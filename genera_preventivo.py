@@ -373,6 +373,48 @@ def percorso_libero(cartella, nome):
     return uscita                                   # Output: un percorso, es. output/max-2.docx
 
 
+def componi_documento(preventivo, impresa, bozza):
+    """Costruisce il documento Word in memoria, senza salvarlo. Restituisce (documento, totale).
+
+    È separata da main() perché serve a due programmi: lo script da terminale
+    e la pagina web. Tutti e due le passano un preventivo già controllato.
+    """
+    documento = Document(MODELLO)
+    documento.core_properties.title = titolo_completo(preventivo)   # Il titolo nelle proprietà del file (quello che alcuni programmi mostrano al posto del nome)
+    documento.core_properties.author = impresa["nome"]
+
+    # 1. Intestazione e piè di pagina
+    sostituisci_segnaposto(documento, {
+        "cliente": preventivo.get("cliente") or DA_DEFINIRE,    # "x or y" usa y quando x è vuoto o None
+        "indirizzo": preventivo.get("indirizzo") or DA_DEFINIRE,
+        "data": scrivi_data(preventivo.get("data")),
+        "impresa_nome": impresa["nome"],
+        "impresa_indirizzo": impresa["indirizzo"],
+        "impresa_telefono": impresa["telefono"],
+        "impresa_partita_iva": impresa["partita_iva"],
+    })                                                  # Tutti i {{...}} nel documento Word vengono rimpiazzati col testo vero
+
+    # 2. Tabella: titolo, una riga per voce, totale
+    tabella = documento.tables[0]   # usa aggiungi_riga per scrivere una riga contenente solo il titolo del preventivo nella colonna 1
+    titolo = titolo_completo(preventivo) + (" - BOZZA" if bozza else "")
+    aggiungi_riga(tabella, ["", titolo, "", "", "", ""], grassetto=[1])
+
+    totale = Decimal("0")           # Si parte da zero "esatto", così anche la somma si fa in decimali
+    for numero, voce in enumerate(preventivo["voci"], start=1): # Scorre la lista "voci" dal JSON. enumerate(..., start=1) crea il numerino progressivo (1, 2, 3...)
+        alternativa = voce.get("alternativa", False)            # True solo se nel JSON c'è "alternativa": true
+        aggiungi_riga(tabella, celle_voce(numero, voce), grassetto=[] if alternativa else [5]) # Per ogni voce aggiunge la riga in tabella (mettendo in grassetto l'ultima colonna, la 5). Le alternative restano senza grassetto, perché non si sommano
+        importo = importo_voce(voce)
+        if importo is not None and not alternativa:
+            totale += importo       # Si sommano solo le voci che hanno un importo e che non sono alternative
+
+    etichetta = "Totale parziale" if bozza else "Totale"
+    importo_totale = euro(totale) + " + IVA" + (" (esclusi i dati da definire)" if bozza else "")
+    riga_totale = aggiungi_riga(tabella, ["", etichetta, importo_totale, "", "", ""], grassetto=[1, 2]) # "Totale" nella colonna 1, e il numero finale nella colonna 2
+    # Unisco le ultime quattro celle, così il totale ha spazio e non va a capo.
+    riga_totale.cells[2].merge(riga_totale.cells[5])            # Prende la cella 2 e la fonde (.merge()) con la cella 5
+    return documento, totale        # Output: il documento pronto da salvare e il totale come Decimal
+
+
 # ---------------------------------------------------------------------------
 # Il programma vero e proprio
 # ---------------------------------------------------------------------------
@@ -410,39 +452,8 @@ def main():
         sys.exit(1)
     bozza = len(mancanze) > 0       # True se manca qualcosa: il documento esce come bozza
 
-    documento = Document(MODELLO)
-    documento.core_properties.title = titolo_completo(preventivo)   # Il titolo nelle proprietà del file (quello che alcuni programmi mostrano al posto del nome)
-    documento.core_properties.author = impresa["nome"]
-
-    # 1. Intestazione e piè di pagina
-    sostituisci_segnaposto(documento, {
-        "cliente": preventivo.get("cliente") or DA_DEFINIRE,    # "x or y" usa y quando x è vuoto o None
-        "indirizzo": preventivo.get("indirizzo") or DA_DEFINIRE,
-        "data": scrivi_data(preventivo.get("data")),
-        "impresa_nome": impresa["nome"],
-        "impresa_indirizzo": impresa["indirizzo"],
-        "impresa_telefono": impresa["telefono"],
-        "impresa_partita_iva": impresa["partita_iva"],
-    })                                                  # Tutti i {{...}} nel documento Word vengono rimpiazzati col testo vero
-
-    # 2. Tabella: titolo, una riga per voce, totale
-    tabella = documento.tables[0]   # usa aggiungi_riga per scrivere una riga contenente solo il titolo del preventivo nella colonna 1
-    titolo = titolo_completo(preventivo) + (" - BOZZA" if bozza else "")
-    aggiungi_riga(tabella, ["", titolo, "", "", "", ""], grassetto=[1])
-
-    totale = Decimal("0")           # Si parte da zero "esatto", così anche la somma si fa in decimali
-    for numero, voce in enumerate(preventivo["voci"], start=1): # Scorre la lista "voci" dal JSON. enumerate(..., start=1) crea il numerino progressivo (1, 2, 3...)
-        alternativa = voce.get("alternativa", False)            # True solo se nel JSON c'è "alternativa": true
-        aggiungi_riga(tabella, celle_voce(numero, voce), grassetto=[] if alternativa else [5]) # Per ogni voce aggiunge la riga in tabella (mettendo in grassetto l'ultima colonna, la 5). Le alternative restano senza grassetto, perché non si sommano
-        importo = importo_voce(voce)
-        if importo is not None and not alternativa:
-            totale += importo       # Si sommano solo le voci che hanno un importo e che non sono alternative
-
+    documento, totale = componi_documento(preventivo, impresa, bozza)   # Punti 1 e 2: intestazione, piè di pagina e tabella
     etichetta = "Totale parziale" if bozza else "Totale"
-    importo_totale = euro(totale) + " + IVA" + (" (esclusi i dati da definire)" if bozza else "")
-    riga_totale = aggiungi_riga(tabella, ["", etichetta, importo_totale, "", "", ""], grassetto=[1, 2]) # "Totale" nella colonna 1, e il numero finale nella colonna 2
-    # Unisco le ultime quattro celle, così il totale ha spazio e non va a capo.
-    riga_totale.cells[2].merge(riga_totale.cells[5])            # Prende la cella 2 e la fonde (.merge()) con la cella 5
 
     # 3. Salvataggio
     CARTELLA_USCITA.mkdir(exist_ok=True)    # exist_ok=True evita che il programma vada in crash se la cartella c'è già

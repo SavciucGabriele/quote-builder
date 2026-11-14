@@ -1,41 +1,35 @@
 # preventivi-ai
 
 Strumento per aiutare una piccola impresa edile a preparare preventivi e
-consuntivi dettandoli a voce, invece di scriverli e impaginarli a mano in
-Word ed Excel.
+consuntivi senza scriverli e impaginarli a mano in Word.
 
-**Stato: fase iniziale, non c'è ancora codice funzionante.**
+**Stato: in sviluppo. La pagina funziona sul computer di chi sviluppa; mancano
+la correzione dei testi e la messa online.**
 
 ## Il problema
 
-Il titolare sa cosa scrivere nel preventivo, ma scriverlo al computer e
-impaginarlo gli costa molto tempo, e i documenti restano arretrati.
-Dettare a un assistente generico aiuta solo in parte: non ricorda i prezzi
-già usati, impagina ogni volta in modo diverso e il testo va comunque
-copiato a mano nel documento.
+Il titolare sa cosa mettere nel preventivo, ma scriverlo al computer e
+impaginarlo gli costa molto tempo, e i documenti restano arretrati. Nei
+documenti fatti a mano finiscono anche errori di somma e di formato.
 
-## L'idea
+## Come funziona
 
-Un solo progetto con due percorsi che condividono un archivio delle voci
-e dei prezzi già usati.
+Una pagina web con le caselle in ordine: cliente, data, luogo, lavoro e poi le
+voci. Ogni casella si può scrivere o dettare con il microfono della tastiera.
+Il programma sistema prezzi e indirizzi, fa i conti e crea il documento Word
+con l'impaginazione dell'impresa.
 
-- **Da vocale a documento:** il titolare detta le lavorazioni, il sistema
-  produce il preventivo già impaginato.
-- **Excel di architetti e geometri:** il sistema legge le voci già scritte
-  e aiuta a compilare i prezzi senza toccare il resto del file.
-
-Il prezzo lo decide sempre il titolare. Il sistema può proporre quello
-usato per lavorazioni simili in passato, ma non lo inventa. I calcoli
-(importi, totali, IVA) li fa il codice, non il modello linguistico.
+Una voce può essere a corpo, a misura con il prezzo per unità, oppure a misura
+con il totale già deciso. Se manca un dato il documento esce come BOZZA, con
+le caselle da completare evidenziate.
 
 ## A che punto è
-**Stato: in sviluppo. Per ora genera il documento Word a partire da un file di dati.**
-- [x] Generare un preventivo impaginato da una lista di voci
-- [ ] Ricavare la lista di voci da un testo
-- [ ] Trascrivere un vocale
-- [ ] Archivio delle voci e suggerimento dei prezzi
-- [ ] Compilazione degli Excel ricevuti
-- [ ] Uso dal telefono
+
+- [x] Dal file di dati al Word, con controlli, bozze e conti esatti
+- [x] Pulizia di prezzi e indirizzi
+- [x] Pagina per compilare il preventivo
+- [ ] Correzione dell'italiano nelle descrizioni
+- [ ] Pagina online, per telefono e computer
 
 ## Come si usa
 
@@ -43,27 +37,13 @@ usato per lavorazioni simili in passato, ma non lo inventa. I calcoli
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python genera_preventivo.py examples/preventivo_esempio.json
+python app.py
 ```
 
-Il documento viene creato nella cartella `output/`.
-
-Prima di generare, lo script controlla i dati. Se il file contiene errori
-(un campo scritto male, un numero tra virgolette) si ferma e li elenca. Se
-manca qualcosa, per esempio un prezzo, crea comunque il documento come BOZZA,
-con i dati mancanti evidenziati:
-
-```bash
-python genera_preventivo.py examples/bozza_esempio.json
-```
-
-Per lanciare i test:
-
-```bash
-python -m pytest
-```
+Poi si apre `http://127.0.0.1:8000` nel browser. Per lanciare i test:
+`python -m pytest`.
 
 ## Dati
 
-Il repository non contiene documenti, clienti o prezzi reali: gli esempi
-sono inventati.
+Il repository non contiene documenti, clienti o prezzi reali: gli esempi sono
+inventati.
