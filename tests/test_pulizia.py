@@ -128,3 +128,50 @@ def test_indirizzo_senza_civico_e_senza_virgole():
 def test_indirizzo_vuoto():
     assert sistema_indirizzo("") == ""
     assert sistema_indirizzo("   ") == ""
+
+# ---------------------------------------------------------------------------
+# Quantità e unità di misura (aggiunte dopo la prima prova della pagina)
+# ---------------------------------------------------------------------------
+from pulizia import leggi_quantita, sistema_unita
+
+
+def test_quantita_con_tre_decimali():
+    # Per i volumi (mc) capitano tre decimali: 2,125 non va rifiutata come un prezzo
+    assert leggi_quantita("2,125") == Decimal("2.125")
+    assert leggi_quantita("25") == Decimal("25")
+    assert leggi_quantita("8,5") == Decimal("8.5")
+
+
+def test_quantita_troppo_precisa_o_strana():
+    assert leggi_quantita("2,1256") is None
+    assert leggi_quantita("circa dieci") is None
+
+
+def test_prezzo_resta_a_due_decimali():
+    # Il prezzo non deve cambiare: tre decimali restano ambigui
+    assert leggi_prezzo("2,125") is None
+
+
+def test_unita_dettate_diventano_sigle():
+    assert sistema_unita("metri quadrati") == "mq"
+    assert sistema_unita("Metri Quadri") == "mq"
+    assert sistema_unita("m2") == "mq"
+    assert sistema_unita("m²") == "mq"
+    assert sistema_unita("metri cubi") == "mc"
+    assert sistema_unita("metri lineari") == "ml"
+    assert sistema_unita("metri") == "mt"
+    assert sistema_unita("pezzi") == "pz"
+    assert sistema_unita("ora") == "ore"
+    assert sistema_unita("H") == "ore"
+
+
+def test_unita_con_maiuscole_punti_e_spazi():
+    assert sistema_unita("  MQ. ") == "mq"
+    assert sistema_unita("Mt.") == "mt"
+    assert sistema_unita("m  quadrati") == "mq"
+
+
+def test_unita_sconosciuta_resta_com_e_ma_in_minuscolo():
+    assert sistema_unita("Kg") == "kg"
+    assert sistema_unita("Giorni") == "giorni"
+    assert sistema_unita("") == ""

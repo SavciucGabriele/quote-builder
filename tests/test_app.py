@@ -148,3 +148,58 @@ def test_senza_voci_non_crea_niente(browser):
     dati = modulo_compilato()
     dati["voci"] = []
     assert browser.post("/crea", json=dati).status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Correzioni dopo la prima prova della pagina
+# ---------------------------------------------------------------------------
+from app import frase_per_unita, riassunto
+
+
+def test_frase_per_unita():
+    assert frase_per_unita("mq") == "al mq"
+    assert frase_per_unita("ore") == "all'ora"
+    assert frase_per_unita("pz") == "al pezzo"
+    assert frase_per_unita("giorni") == "al giorno"
+    assert frase_per_unita("") == "per unità"                   # Unità non scelta: mai "al unità"
+    assert frase_per_unita("fusti") == "per unità (fusti)"      # Unità sconosciuta: nessuna frase sbagliata
+
+
+def test_dettaglio_con_ore_e_senza_unita():
+    voce_ore = {"descrizione": "Manodopera", "unita": "ore", "quantita": 8, "importo": 240}
+    voce_senza = {"descrizione": "Posa", "quantita": 4, "importo": 100}
+    preventivo = {"indirizzo": "", "voci": [voce_ore, voce_senza]}
+    dettagli = [riga["dettaglio"] for riga in riassunto(preventivo, [])["voci"]]
+    assert dettagli[0] == "Totale voce € 240,00 - € 30,00 all'ora"
+    assert dettagli[1] == "Totale voce € 100,00 - € 25,00 per unità"
+
+
+def test_unita_dettata_viene_sistemata():
+    voce, _ = leggi_voce(1, {"descrizione": "Rasatura", "misura": "misura", "quantita": "25", "unita": "Metri Quadrati", "prezzo": "700", "tipo_prezzo": "totale"})
+    assert voce["unita"] == "mq"
+
+
+def test_quantita_con_tre_decimali_nella_voce():
+    voce, problemi = leggi_voce(1, {"descrizione": "Getto", "misura": "misura", "quantita": "2,125", "unita": "mc", "prezzo": "100", "tipo_prezzo": "unitario"})
+    assert problemi == [] and voce["quantita"] == 2.125
+
+
+def test_voce_a_corpo_ignora_quantita_e_unita_nascoste():
+    # Si sceglie "A misura", si scrive la quantità, poi si torna a "A corpo": la riga è vuota
+    voce, problemi = leggi_voce(1, {"descrizione": "", "misura": "corpo", "quantita": "25", "unita": "mq", "prezzo": "", "tipo_prezzo": "totale"})
+    assert voce is None and problemi == []
+    # E se la riga ha una descrizione, quantità e unità nascoste non finiscono nella voce
+    voce, _ = leggi_voce(1, {"descrizione": "Pulizia", "misura": "corpo", "quantita": "25", "unita": "mq", "prezzo": "300", "tipo_prezzo": "totale"})
+    assert voce == {"descrizione": "Pulizia", "importo": 300}
+
+
+def test_modulo_storto_non_manda_in_crash():
+    # Dati che la pagina non manderebbe mai, ma un errore 500 non deve uscire comunque
+    for storto in ([1, 2], "ciao", None, {"voci": "ciao"}, {"voci": ["ciao", 5, None]}):
+        preventivo, problemi = leggi_modulo(storto)
+        assert preventivo["voci"] == []
+
+
+def test_nome_del_file_toglie_gli_accenti_senza_perdere_lettere():
+    preventivo = {"cliente": "Ștefan Țurcanu & Società", "titolo": "Bagno"}
+    assert nome_del_file(preventivo, bozza=False) == "stefan_turcanu_societa_bagno"

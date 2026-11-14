@@ -35,11 +35,13 @@ def _senza_migliaia(testo, separatore):
     return None
 
 
-def leggi_prezzo(testo):
+def leggi_prezzo(testo, decimali_max=2):
     """Capisce un prezzo scritto in tanti modi e lo restituisce come numero esatto.
 
     '593€', '€ 593', '593 euro', '593,5', '1.200', '1.200,50' vanno tutti bene.
     Se il testo non è un prezzo chiaro ('circa mille', '1,234') restituisce None.
+    decimali_max è il numero massimo di cifre dopo la virgola: 2 per i prezzi (i centesimi),
+    3 per le quantità (leggi_quantita). Esempio: leggi_prezzo("2,125", 3) -> Decimal('2.125').
     """
     if not isinstance(testo, str):
         return None
@@ -69,13 +71,21 @@ def leggi_prezzo(testo):
 
     if intero is None or not intero.isdigit():          # isdigit è True se la stringa è fatta solo di cifre (e non è vuota)
         return None
-    if decimali and (not decimali.isdigit() or len(decimali) > 2):  # I centesimi sono al massimo due cifre: '1,234' è ambiguo, meglio non indovinare
+    if decimali and (not decimali.isdigit() or len(decimali) > decimali_max):  # Per i prezzi i centesimi sono al massimo due cifre: '1,234' è ambiguo, meglio non indovinare
         return None
 
     prezzo = Decimal(intero + "." + (decimali or "0"))  # Ricompone il numero col punto, come lo vuole Decimal: '593' + '.' + '5'
     if negativo:
         prezzo = -prezzo
-    return prezzo.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)     # Sempre con due decimali. Output: Decimal('593.50')
+    return prezzo.quantize(Decimal(1).scaleb(-decimali_max), rounding=ROUND_HALF_UP)     # Sempre con 2 decimali (3 per le quantità): scaleb(-2) trasforma 1 in 0.01. Output: Decimal('593.50')
+
+
+def leggi_quantita(testo):
+    """Come leggi_prezzo, ma accetta fino a tre decimali: '2,125' -> Decimal('2.125').
+
+    Serve per le quantità: i metri cubi, per esempio, si misurano spesso con tre decimali.
+    """
+    return leggi_prezzo(testo, decimali_max=3)
 
 
 def sistema_prezzo(testo):
@@ -259,3 +269,28 @@ def sistema_indirizzo(testo):
         sigla,                                                  # 'MI'
     ]
     return ", ".join(pezzo for pezzo in risultato if pezzo)     # Unisce con le virgole solo i pezzi non vuoti
+
+
+# ---------------------------------------------------------------------------
+# Unità di misura
+# ---------------------------------------------------------------------------
+# Come si può scrivere o dettare ogni unità, e la sigla che deve comparire nel Word.
+# Le sigle sono quelle del menu della pagina (mq, mt, ml, mc, pz, ore).
+NOMI_UNITA = {
+    "mq": ("mq", "m2", "m²", "metro quadro", "metro quadrato", "metri quadri", "metri quadrati", "m quadri", "m quadrati"),
+    "mc": ("mc", "m3", "m³", "metro cubo", "metri cubi", "m cubi"),
+    "ml": ("ml", "metro lineare", "metri lineari", "m lineari"),
+    "mt": ("mt", "m", "metro", "metri"),
+    "pz": ("pz", "pezzo", "pezzi"),
+    "ore": ("ore", "ora", "h"),
+}
+SIGLA_UNITA = {nome: sigla for sigla, nomi in NOMI_UNITA.items() for nome in nomi}   # Dizionario rovesciato, per cercare in fretta: {"metri quadrati": "mq", "m2": "mq", ...}
+
+
+def sistema_unita(testo):
+    """'Metri Quadrati' -> 'mq', 'm2' -> 'mq', 'ora' -> 'ore', 'Kg' -> 'kg'.
+
+    Un'unità che non conosco resta com'è, ma in minuscolo e senza punti.
+    """
+    pulito = re.sub(r"\s+", " ", testo.lower().replace(".", "")).strip()    # Minuscolo, senza punti ("mt." -> "mt"), spazi doppi ridotti a uno
+    return SIGLA_UNITA.get(pulito, pulito)                                  # .get(x, y): la sigla se la conosce, altrimenti lo stesso testo

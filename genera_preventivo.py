@@ -162,7 +162,7 @@ def celle_voce(numero, voce):
 
     if not manca(voce, "importo") and not manca(voce, "quantita"):
         # Voce a misura di cui è stato deciso il totale: il costo unitario si ricava dividendo (se il conto torna).
-        unita = voce.get("unita") or ""
+        unita = voce.get("unita") or DA_DEFINIRE                # Una voce a misura senza unità: si vede in giallo, non resta una casella vuota
         quantita = scrivi_quantita(voce["quantita"])
         unitario = unitario_dal_totale(voce)                    # Un Decimal, oppure None se la divisione non è precisa
         unitario = "" if unitario is None else euro(unitario)   # Una stringa vuota lascia la casella vuota nel Word
@@ -173,8 +173,8 @@ def celle_voce(numero, voce):
         # Prezzo del tutto assente: non si sa nemmeno se sarà a corpo o a misura.
         unita, quantita, unitario = voce.get("unita") or "", "", DA_DEFINIRE
     else:
-        # Se è a misura, legge i valori dal JSON (se manca l'unità, usa una stringa vuota "").
-        unita = voce.get("unita") or ""
+        # Se è a misura, legge i valori dal JSON (se manca l'unità scrive DA_DEFINIRE, come per quantità e prezzo).
+        unita = voce.get("unita") or DA_DEFINIRE
         quantita = DA_DEFINIRE if manca(voce, "quantita") else scrivi_quantita(voce["quantita"])
         unitario = DA_DEFINIRE if manca(voce, "prezzo_unitario") else euro(voce["prezzo_unitario"])
 
@@ -242,6 +242,8 @@ def controlla_voce(numero, voce):
             mancanze.append(f"{nome}: manca la quantità")
         elif not ha_quantita and not ha_unitario:
             mancanze.append(f"{nome}: manca il prezzo")
+    if (ha_quantita or ha_unitario) and manca(voce, "unita"):
+        mancanze.append(f"{nome}: manca l'unità di misura")     # Una voce a misura senza unità (mq, mt, ore...) non si capisce: va completata
 
     return errori, mancanze         # Output: due liste di frasi, es. ([], ['Voce 3 ("Posa piastrelle"): manca il prezzo'])
 
@@ -266,7 +268,9 @@ def controlla_preventivo(preventivo):
         elif not isinstance(preventivo[campo], str):
             errori.append(f'"{campo}" deve essere un testo tra virgolette')
 
-    if not manca(preventivo, "data"):
+    if manca(preventivo, "data"):
+        mancanze.append("Manca: data")                      # Senza data il documento esce con la riga vuota: meglio segnalarlo
+    else:
         try:
             date.fromisoformat(preventivo["data"])          # Prova a leggere la data: se non è nel formato giusto Python lancia un errore...
         except (TypeError, ValueError):

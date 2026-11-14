@@ -16,6 +16,7 @@ from genera_preventivo import (
     celle_voce,
     controlla_impresa,
     controlla_preventivo,
+    controlla_voce,
     euro,
     importo_voce,
     percorso_libero,
@@ -244,3 +245,28 @@ def test_percorso_libero_non_sovrascrive(tmp_path):
     assert percorso_libero(tmp_path, "max").name == "max-2.docx"
     (tmp_path / "max-2.docx").write_text("finto documento")
     assert percorso_libero(tmp_path, "max").name == "max-3.docx"
+
+
+# ---------------------------------------------------------------------------
+# Unità e data mancanti (aggiunte dopo la prima prova della pagina)
+# ---------------------------------------------------------------------------
+def test_voce_a_misura_senza_unita_e_una_mancanza():
+    errori, mancanze = controlla_voce(1, {"descrizione": "Posa", "quantita": 6, "prezzo_unitario": 55})
+    assert errori == []
+    assert mancanze == ['Voce 1 ("Posa"): manca l\'unità di misura']
+
+
+def test_voce_a_corpo_non_ha_bisogno_dell_unita():
+    assert controlla_voce(1, {"descrizione": "Pulizia", "importo": 300}) == ([], [])
+
+
+def test_celle_voce_senza_unita_scrive_da_definire():
+    celle = celle_voce(1, {"descrizione": "Posa", "quantita": 6, "prezzo_unitario": 55})
+    assert celle[2] == DA_DEFINIRE
+
+
+def test_data_mancante_e_una_mancanza():
+    preventivo = {"tipo": "preventivo", "cliente": "X", "indirizzo": "Via Roma 1", "titolo": "T",
+                  "voci": [{"descrizione": "Pulizia", "importo": 300}]}
+    errori, mancanze = controlla_preventivo(preventivo)
+    assert errori == [] and mancanze == ["Manca: data"]

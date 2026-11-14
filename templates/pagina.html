@@ -26,6 +26,7 @@
     .nascosto { display: none; }
     .dettaglio { font-size: 15px; color: var(--grigio); margin: 10px 0 0; min-height: 1.4em; }
     button { font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: wait; }        /* Mentre il documento si sta creando il pulsante resta spento: un secondo tocco non crea un secondo file */
     .secondario { background: #fff; color: var(--blu); border: 1px solid var(--blu); width: 100%; }
     .togli { background: none; border: none; color: var(--rosso); padding: 4px 0; font-size: 14px; }
     .principale { background: var(--blu); color: #fff; border: 1px solid var(--blu); }
@@ -199,13 +200,19 @@
   }
 
   // Manda il modulo a Python e restituisce la risposta.
+  // Se il programma è spento, o risponde in un modo che non si capisce, restituisce dati: null invece di rompersi in silenzio.
+  const NON_RAGGIUNGIBILE = "Non riesco a collegarmi al programma. Controlla che sia acceso e riprova.";
   async function chiedi(indirizzo) {
-    const risposta = await fetch(indirizzo, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(leggiModulo()),
-    });
-    return { ok: risposta.ok, dati: await risposta.json() };
+    try {
+      const risposta = await fetch(indirizzo, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leggiModulo()),
+      });
+      return { ok: risposta.ok, dati: await risposta.json() };
+    } catch (errore) {
+      return { ok: false, dati: null };
+    }
   }
 
   // Scrive un riquadro colorato con un titolo e un elenco di frasi.
@@ -221,24 +228,47 @@
     return div;
   }
 
+  // Una voce conta come "compilata" se c'è scritto qualcosa nelle caselle che si vedono.
+  // Quantità e unità sono nascoste nelle voci a corpo: se lì è rimasto qualcosa, non va contato (lo stesso fa app.py).
+  function vociCompilate() {
+    return [...voci.querySelectorAll(".voce")].filter(voce => {
+      const aMisura = voce.querySelector(".misura").value === "misura";
+      const caselle = aMisura ? [".descrizione", ".quantita", ".prezzo"] : [".descrizione", ".prezzo"];
+      return caselle.some(nome => voce.querySelector(nome).value.trim() !== "") || (aMisura && unitaScelta(voce).trim() !== "");
+    });
+  }
+
   // Chiede a Python totali e testi sistemati, e li mostra.
   // "casella" è la casella appena lasciata: solo quella viene riscritta, per non disturbare mentre si scrive altrove.
+  let ultimaRichiesta = 0;      // Numera le richieste: se ne parte una nuova mentre la vecchia non è tornata, conta solo la nuova
   async function aggiorna(casella) {
+    const mia = ++ultimaRichiesta;
+    const compilate = vociCompilate();                  // Le voci compilate nel momento in cui parte la richiesta: le risposte di Python si abbinano a queste
+    const inviato = casella ? casella.value : null;     // Cosa c'era scritto nella casella quando è partita la richiesta
     const { dati } = await chiedi("/anteprima");
-    document.getElementById("totale").textContent = dati.totale;
+    if (!dati) { messaggi.replaceChildren(riquadro("errori", NON_RAGGIUNGIBILE, [])); return; }
 
-    if (casella && casella.id === "indirizzo") casella.value = dati.indirizzo;      // "via ponte 33 cernusco milano" -> "Via Ponte 33, Cernusco, MI"
-
-    // Le righe vuote Python le salta: qui si abbinano le risposte alle sole voci compilate.
-    const compilate = [...voci.querySelectorAll(".voce")].filter(voce =>
-      [".descrizione", ".quantita", ".prezzo"].some(nome => voce.querySelector(nome).value.trim() !== "") || unitaScelta(voce).trim() !== "");
-    voci.querySelectorAll(".dettaglio").forEach(riga => riga.textContent = "");
+    // Una casella si riscrive solo se nel frattempo non è stata modificata di nuovo: altrimenti si cancellerebbe quello che si sta scrivendo.
+    const invariata = !casella || casella.value === inviato;
+    if (casella && casella.id === "indirizzo" && invariata) casella.value = dati.indirizzo;     // "via ponte 33 cernusco milano" -> "Via Ponte 33, Cernusco, MI"
     compilate.forEach((voce, posizione) => {
       const riga = dati.voci[posizione];
-      if (!riga) return;
-      voce.querySelector(".dettaglio").textContent = riga.dettaglio;
+      if (!riga || !invariata) return;
       const prezzo = voce.querySelector(".prezzo");
-      if (casella === prezzo && riga.prezzo) prezzo.value = riga.prezzo;             // "593€" -> "€ 593,00"
+      if (casella === prezzo && riga.prezzo) prezzo.value = riga.prezzo;                        // "593€" -> "€ 593,00"
+      const altra = voce.querySelector(".altra-unita");
+      if (casella === altra && riga.unita) {                                                    // "Metri Quadrati" -> "mq"
+        const menu = voce.querySelector(".unita");
+        if ([...menu.options].some(opzione => opzione.value === riga.unita)) { menu.value = riga.unita; altra.value = ""; mostraCampiMisura(voce); }   // Se è un'unità del menu, torna lì
+        else altra.value = riga.unita;
+      }
+    });
+
+    if (mia !== ultimaRichiesta) return;                // C'è già una richiesta più recente: totale, righe e avvisi li scrive quella
+    document.getElementById("totale").textContent = dati.totale;
+    voci.querySelectorAll(".dettaglio").forEach(riga => riga.textContent = "");   // Le righe vuote Python le salta: si abbinano le risposte alle sole voci compilate
+    compilate.forEach((voce, posizione) => {
+      if (dati.voci[posizione]) voce.querySelector(".dettaglio").textContent = dati.voci[posizione].dettaglio;
     });
 
     // Gli errori si mostrano solo se riguardano qualcosa di scritto male: "non c'è nessuna voce" all'inizio sarebbe solo fastidioso.
@@ -249,16 +279,27 @@
 
   // Crea il Word. Se Python risponde con degli errori li mostra, altrimenti fa partire lo scaricamento.
   async function crea() {
-    const { ok, dati } = await chiedi("/crea");
-    messaggi.replaceChildren();
-    if (!ok) {
-      messaggi.appendChild(riquadro("errori", "Il preventivo non è stato creato. Da correggere:", dati.errori));
-    } else {
-      if (dati.bozza) messaggi.appendChild(riquadro("mancanze", "Creato come BOZZA. Mancano ancora:", dati.mancanze));
-      else messaggi.appendChild(riquadro("fatto", "Preventivo creato: " + dati.file + " (" + dati.totale + ")", []));
-      window.location = "/scarica/" + encodeURIComponent(dati.file);
+    const pulsante = document.getElementById("crea");
+    if (pulsante.disabled) return;
+    pulsante.disabled = true;                           // Spento finché non arriva la risposta: un secondo tocco non crea un secondo file
+    pulsante.textContent = "Sto creando...";
+    try {
+      const { ok, dati } = await chiedi("/crea");
+      messaggi.replaceChildren();
+      if (!dati) {
+        messaggi.appendChild(riquadro("errori", NON_RAGGIUNGIBILE, []));
+      } else if (!ok) {
+        messaggi.appendChild(riquadro("errori", "Il preventivo non è stato creato. Da correggere:", dati.errori));
+      } else {
+        if (dati.bozza) messaggi.appendChild(riquadro("mancanze", "Creato come BOZZA. Mancano ancora:", dati.mancanze));
+        else messaggi.appendChild(riquadro("fatto", "Preventivo creato: " + dati.file + " (" + dati.totale + ")", []));
+        window.location = "/scarica/" + encodeURIComponent(dati.file);
+      }
+    } finally {
+      pulsante.disabled = false;                        // "finally" gira sempre, anche se qualcosa va storto: il pulsante non resta bloccato
+      pulsante.textContent = "Crea il preventivo";
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });     // Torna in cima, dove sta il messaggio
+    window.scrollTo({ top: 0, behavior: "smooth" });    // Torna in cima, dove sta il messaggio
   }
 
   // Cosa succede quando si tocca qualcosa.

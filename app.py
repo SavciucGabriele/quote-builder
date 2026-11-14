@@ -16,12 +16,13 @@ pagina non fa calcoli, chiede a questo programma e mostra la risposta.
 
 import json
 import re
+import unicodedata
 from datetime import date
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 import genera_preventivo as gp      # "as gp" è un soprannome: per usare euro() si scrive gp.euro()
-from pulizia import leggi_prezzo, sistema_indirizzo
+from pulizia import leggi_prezzo, leggi_quantita, sistema_indirizzo, sistema_unita
 
 CARTELLA_USCITA = gp.CARTELLA_USCITA                                # output/: dove finiscono i Word
 CARTELLA_ARCHIVIO = gp.CARTELLA / "data" / "raw" / "preventivi"     # Dove si salvano i dati di ogni preventivo creato (resta solo sul Mac)
@@ -41,6 +42,24 @@ def numero_per_json(numero):
     return float(numero)
 
 
+# Come si dice "il prezzo per ogni ..." con ogni unità: "al mq", "all'ora", "al pezzo"...
+FRASI_PER_UNITA = {
+    "mq": "al mq", "mt": "al mt", "ml": "al ml", "mc": "al mc", "kg": "al kg",
+    "pz": "al pezzo", "ore": "all'ora", "giorni": "al giorno",
+}
+
+
+def frase_per_unita(unita):
+    """'mq' -> 'al mq', 'ore' -> "all'ora", '' -> 'per unità'.
+
+    Scrivere sempre "al {unita}" darebbe "al ore" o "al unità". Per le unità che non conosco
+    la frase resta corretta in ogni caso: 'fusti' -> 'per unità (fusti)'.
+    """
+    if not unita:
+        return "per unità"
+    return FRASI_PER_UNITA.get(unita) or f"per unità ({unita})"
+
+
 def leggi_voce(numero, dati):
     """Trasforma una voce scritta nella pagina in una voce del preventivo.
 
@@ -50,7 +69,12 @@ def leggi_voce(numero, dati):
     Restituisce (voce, problemi). La voce è None se la riga è stata lasciata vuota.
     I problemi sono frasi su quello che non è stato capito, es. un prezzo scritto in modo strano.
     """
+    if not isinstance(dati, dict):      # Un dato che non è un insieme di caselle: lo salto invece di andare in errore
+        return None, []
+    a_misura = dati.get("misura") == "misura"
     testo = {campo: str(dati.get(campo) or "").strip() for campo in ("descrizione", "quantita", "unita", "prezzo")}     # I testi delle caselle senza spazi intorno; una casella mancante diventa ""
+    if not a_misura:
+        testo["quantita"] = testo["unita"] = ""     # Quantità e unità sono nascoste nelle voci a corpo: se c'è qualcosa di scritto è un residuo, non va contato
     if not any(testo.values()):         # any(...) è True se almeno una casella contiene qualcosa
         return None, []                 # Riga lasciata tutta vuota: si salta
 
@@ -62,12 +86,12 @@ def leggi_voce(numero, dati):
         if prezzo is None:
             problemi.append(f'Voce {numero}: non ho capito il prezzo "{testo["prezzo"]}". Scrivilo come 593 oppure 593,50')
 
-    if dati.get("misura") == "misura":
+    if a_misura:
         # Voce a misura: servono quantità e unità, e il prezzo può essere il totale oppure quello per unità.
         if testo["unita"]:
-            voce["unita"] = testo["unita"]
+            voce["unita"] = sistema_unita(testo["unita"])   # "Metri Quadrati" -> "mq"
         if testo["quantita"]:
-            quantita = leggi_prezzo(testo["quantita"])      # Riuso leggi_prezzo anche per le quantità: capisce "8,5" e "25" allo stesso modo
+            quantita = leggi_quantita(testo["quantita"])    # Come leggi_prezzo ma con tre decimali: capisce "8,5", "25" e "2,125"
             if quantita is None:
                 problemi.append(f'Voce {numero}: non ho capito la quantità "{testo["quantita"]}". Scrivila come 25 oppure 8,5')
             else:
@@ -87,6 +111,8 @@ def leggi_modulo(dati):
     Il nome del cliente resta esattamente come è stato scritto. L'indirizzo
     passa da sistema_indirizzo, i prezzi da leggi_prezzo.
     """
+    if not isinstance(dati, dict):      # La pagina manda sempre un dizionario, ma una richiesta storta non deve mandare in crash il programma
+        dati = {}
     preventivo = {
         "tipo": dati.get("tipo") or "preventivo",
         "cliente": str(dati.get("cliente") or "").strip(),
@@ -96,7 +122,8 @@ def leggi_modulo(dati):
         "voci": [],
     }
     problemi = []
-    for dati_voce in dati.get("voci") or []:
+    elenco_voci = dati.get("voci")
+    for dati_voce in elenco_voci if isinstance(elenco_voci, list) else []:      # Se "voci" non è una lista (es. un testo) si fa finta che sia vuota
         voce, problemi_voce = leggi_voce(len(preventivo["voci"]) + 1, dati_voce)    # Il numero della voce è la sua posizione tra quelle non vuote
         if voce is not None:
             preventivo["voci"].append(voce)
@@ -109,7 +136,7 @@ def riassunto(preventivo, problemi):
 
     Restituisce un dizionario, per esempio:
         {"indirizzo": "Via Roma 1, Milano", "totale": "€ 700,00 + IVA",
-         "voci": [{"prezzo": "€ 700,00", "dettaglio": "Totale voce € 700,00 - € 28,00 al mq"}],
+         "voci": [{"prezzo": "€ 700,00", "unita": "mq", "dettaglio": "Totale voce € 700,00 - € 28,00 al mq"}],
          "errori": [], "mancanze": ["Manca: cliente"]}
     """
     errori, mancanze = gp.controlla_preventivo(preventivo)
@@ -118,7 +145,7 @@ def riassunto(preventivo, problemi):
     righe, totale = [], gp.Decimal("0")
     for voce in preventivo["voci"]:
         prezzo = voce.get("importo", voce.get("prezzo_unitario"))  # Il prezzo scritto, qualunque dei due sia; None se non c'è
-        riga = {"prezzo": gp.euro(prezzo) if gp.e_un_numero(prezzo) else "", "dettaglio": ""}
+        riga = {"prezzo": gp.euro(prezzo) if gp.e_un_numero(prezzo) else "", "unita": voce.get("unita", ""), "dettaglio": ""}
         try:
             importo = gp.importo_voce(voce)     # Il totale della voce, oppure None se manca qualcosa
         except Exception:                       # Con dati scritti male il conto può fallire: in quel caso non mostro il dettaglio (l'errore è già nell'elenco)
@@ -126,13 +153,13 @@ def riassunto(preventivo, problemi):
         if importo is not None:
             totale += importo
             riga["dettaglio"] = "Totale voce " + gp.euro(importo)
-            unita = voce.get("unita") or "unità"
+            per_unita = frase_per_unita(voce.get("unita"))      # "al mq", "all'ora", "per unità"...
             if "quantita" in voce and "importo" in voce:
                 unitario = gp.unitario_dal_totale(voce)
                 if unitario is None:
-                    riga["dettaglio"] += f" - il prezzo al {unita} non verrà scritto, perché la divisione non torna precisa"
+                    riga["dettaglio"] += f" - il prezzo {per_unita} non verrà scritto, perché la divisione non torna precisa"
                 else:
-                    riga["dettaglio"] += f" - {gp.euro(unitario)} al {unita}"
+                    riga["dettaglio"] += f" - {gp.euro(unitario)} {per_unita}"
         righe.append(riga)
 
     return {
@@ -147,7 +174,9 @@ def riassunto(preventivo, problemi):
 def nome_del_file(preventivo, bozza):
     """Inventa un nome per il file a partire da cliente e lavoro: 'mario_rossi_rifacimento_bagno'."""
     testo = (preventivo["cliente"] + " " + preventivo["titolo"]).lower()
-    nome = re.sub(r"[^a-z0-9àèéìòù]+", "_", testo).strip("_")[:60]     # Tutto ciò che non è lettera o cifra diventa "_"; [:60] lo accorcia se è lunghissimo
+    testo = unicodedata.normalize("NFKD", testo)                        # Separa ogni lettera accentata nella lettera e nel suo accento: "ș" -> "s" + "◌̦"
+    testo = "".join(c for c in testo if not unicodedata.combining(c))    # Butta gli accenti e tiene le lettere: "società" -> "societa", "ștefan" -> "stefan"
+    nome = re.sub(r"[^a-z0-9]+", "_", testo).strip("_")[:60]            # Tutto ciò che non è lettera o cifra diventa "_"; [:60] lo accorcia se è lunghissimo
     return (nome or "preventivo") + ("_BOZZA" if bozza else "")        # "x or y" usa y quando x è vuoto
 
 
