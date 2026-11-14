@@ -103,6 +103,18 @@ def test_celle_voce_a_misura():
     assert celle == ["3", "Posa piastrelle", "mq", "6", "€ 55,00", "€ 330,00"]
 
 
+def test_celle_voce_a_misura_con_totale():
+    # 700 € per 25 mq: il costo unitario (28,00) si ricava dividendo.
+    celle = celle_voce(1, {"descrizione": "Rasatura", "quantita": 25, "unita": "mq", "importo": 700})
+    assert celle == ["1", "Rasatura", "mq", "25", "€ 28,00", "€ 700,00"]
+
+
+def test_celle_voce_a_misura_con_totale_che_non_si_divide():
+    # 700 € per 24 mq farebbe 29,1666...: la casella del costo unitario resta vuota, il totale non cambia.
+    celle = celle_voce(1, {"descrizione": "Rasatura", "quantita": 24, "unita": "mq", "importo": 700})
+    assert celle == ["1", "Rasatura", "mq", "24", "", "€ 700,00"]
+
+
 def test_celle_voce_senza_prezzo():
     celle = celle_voce(2, {"descrizione": "Imbiancatura"})
     assert celle[4] == DA_DEFINIRE
@@ -145,12 +157,18 @@ def test_campo_scritto_male_e_un_errore():
     assert 'campo sconosciuto "note"' in errori[0]
 
 
-def test_importo_e_quantita_insieme_e_un_errore():
+def test_due_prezzi_nella_stessa_voce_sono_un_errore():
     preventivo = preventivo_valido()
-    preventivo["voci"][0]["quantita"] = 3
+    preventivo["voci"][0]["prezzo_unitario"] = 50      # la voce ha già "importo": 650
     errori, _ = controlla_preventivo(preventivo)
     assert len(errori) == 1
     assert "ha sia" in errori[0]
+
+
+def test_misura_con_totale_deciso_e_valida():
+    preventivo = preventivo_valido()
+    preventivo["voci"].append({"descrizione": "Rasatura", "quantita": 25, "unita": "mq", "importo": 700})
+    assert controlla_preventivo(preventivo) == ([], [])
 
 
 def test_numero_scritto_come_testo_e_un_errore():

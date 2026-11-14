@@ -104,6 +104,11 @@ def scrivi_data(testo):
 def importo_voce(voce):
     """Importo di una voce: quello scritto, oppure quantità per prezzo unitario.
 
+    Una voce si può scrivere in tre modi:
+      a corpo                 -> "importo"
+      a misura, prezzo unità  -> "quantita" + "prezzo_unitario"   (il totale lo calcola il codice)
+      a misura, totale deciso -> "quantita" + "importo"           (il costo unitario lo ricava il codice)
+
     È l'unico punto in cui si fanno i conti delle voci: il totale non viene
     mai letto dal file, viene sempre ricalcolato da qui.
     Se il prezzo non c'è ancora restituisce None, cioè "non lo so".
@@ -114,6 +119,21 @@ def importo_voce(voce):
         return None                         # A misura, ma manca la quantità o il prezzo: il conto non si può fare. Output: None
     prodotto = decimale(voce["quantita"]) * decimale(voce["prezzo_unitario"])   # Se non è a corpo, moltiplica la quantità per il prezzo singolo (es. 0.65 * 52.90 = 34.385 esatto)
     return prodotto.quantize(CENTESIMI, rounding=ROUND_HALF_UP)                 # e arrotonda strettamente a 2 decimali, col mezzo centesimo in su (34.385 -> 34.39)
+
+
+def unitario_dal_totale(voce):
+    """Per una voce a misura di cui si conosce il totale, ricava il costo unitario: 700 € per 25 mq -> 28,00.
+
+    Lo restituisce solo se il conto torna preciso al centesimo. Con 700 € per
+    24 mq verrebbe 29,1666...: scrivendo 29,17 il cliente rifarebbe il conto e
+    troverebbe 700,08. In quel caso restituisce None e la casella resta vuota:
+    quello che conta è il totale deciso dal titolare.
+    """
+    importo, quantita = decimale(voce["importo"]), decimale(voce["quantita"])
+    unitario = (importo / quantita).quantize(CENTESIMI, rounding=ROUND_HALF_UP)    # Divide e arrotonda al centesimo: 700 / 25 = 28.00
+    if unitario * quantita == importo:      # Controprova: rifacendo la moltiplicazione deve tornare esattamente il totale
+        return unitario
+    return None
 
 
 def titolo_completo(preventivo):
@@ -140,7 +160,13 @@ def celle_voce(numero, voce):
     if not manca(voce, "nota"):
         descrizione += f" ({voce['nota']})" # Se nel JSON c'è anche una "nota", la aggiunge in fondo tra parentesi tonde.
 
-    if not manca(voce, "importo"):
+    if not manca(voce, "importo") and not manca(voce, "quantita"):
+        # Voce a misura di cui è stato deciso il totale: il costo unitario si ricava dividendo (se il conto torna).
+        unita = voce.get("unita") or ""
+        quantita = scrivi_quantita(voce["quantita"])
+        unitario = unitario_dal_totale(voce)                    # Un Decimal, oppure None se la divisione non è precisa
+        unitario = "" if unitario is None else euro(unitario)   # Una stringa vuota lascia la casella vuota nel Word
+    elif not manca(voce, "importo"):
         # Voce a corpo: una sola unità, il costo unitario coincide con il totale.
         unita, quantita, unitario = "A corpo", "1", euro(voce["importo"])
     elif manca(voce, "quantita") and manca(voce, "prezzo_unitario"):
@@ -203,12 +229,12 @@ def controlla_voce(numero, voce):
     if not manca(voce, "quantita") and voce["quantita"] <= 0:
         errori.append(f'{nome}: "quantita" deve essere maggiore di zero')
 
-    ha_importo = not manca(voce, "importo")             # True se la voce è a corpo
+    ha_importo = not manca(voce, "importo")             # True se è stato scritto il totale della voce
     ha_quantita = not manca(voce, "quantita")
     ha_unitario = not manca(voce, "prezzo_unitario")
-    if ha_importo and (ha_quantita or ha_unitario):
-        # I due modi di scrivere un prezzo non si possono mescolare: quale dei due varrebbe?
-        errori.append(f'{nome}: ha sia "importo" sia quantità/prezzo unitario. Tieni solo "importo" (a corpo) oppure "quantita" e "prezzo_unitario" (a misura)')
+    if ha_importo and ha_unitario:
+        # Due prezzi nella stessa voce: quale dei due varrebbe? ("importo" insieme a "quantita" invece va bene: è una voce a misura col totale già deciso)
+        errori.append(f'{nome}: ha sia "importo" sia "prezzo_unitario". Tieni solo uno dei due: il totale della voce oppure il prezzo per unità')
     elif not ha_importo:
         if ha_quantita and not ha_unitario:
             mancanze.append(f"{nome}: manca il prezzo unitario")

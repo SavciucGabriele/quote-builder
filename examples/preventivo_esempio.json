@@ -20,6 +20,12 @@
       "prezzo_unitario": 55
     },
     {
+      "descrizione": "Rasatura e finitura pareti",
+      "quantita": 25,
+      "unita": "mq",
+      "importo": 700
+    },
+    {
       "descrizione": "Fornitura e posa box doccia",
       "importo": 700,
       "nota": "stima"

@@ -112,3 +112,10 @@ Il nome del cliente resta esattamente come viene scritto. Prezzi e indirizzi
 li sistema il codice (da "593€" a "€ 593,00"), senza modello. Al modello
 linguistico arriva solo la descrizione dei lavori, e solo quando si chiede di
 sistemare il testo: nomi, indirizzi e prezzi non gli vengono mai mandati.
+
+## 2026-11-14 — Tre modi di scrivere una voce
+A corpo (solo il totale), a misura con il prezzo per unità (il totale lo
+calcola il codice), a misura con il totale già deciso (il costo unitario lo
+ricava il codice). Nel terzo caso, se la divisione non torna precisa al
+centesimo, il costo unitario non viene stampato: conta il totale deciso dal
+titolare, e un prezzo arrotondato non farebbe tornare il conto al cliente.
