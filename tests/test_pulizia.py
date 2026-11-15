@@ -65,11 +65,11 @@ def test_sistema_prezzo_con_migliaia_e_centesimi():
 # Indirizzi
 # ---------------------------------------------------------------------------
 def test_indirizzo_scritto_di_getto():
-    assert sistema_indirizzo("via ponte 33 Cernusco sul Naviglio milano") == "Via Ponte 33, Cernusco sul Naviglio, MI"
+    assert sistema_indirizzo("via ponte 33 Robecco sul Naviglio milano") == "Via Ponte 33, Robecco sul Naviglio, MI"
 
 
 def test_indirizzo_gia_a_posto_non_cambia():
-    assert sistema_indirizzo("Via Ponte 33, Cernusco sul Naviglio, MI") == "Via Ponte 33, Cernusco sul Naviglio, MI"
+    assert sistema_indirizzo("Via Ponte 33, Robecco sul Naviglio, MI") == "Via Ponte 33, Robecco sul Naviglio, MI"
 
 
 def test_indirizzo_tutto_maiuscolo():
@@ -81,7 +81,7 @@ def test_indirizzo_con_data_nel_nome_della_via():
 
 
 def test_indirizzo_con_cap_e_sigla_tra_parentesi():
-    assert sistema_indirizzo("via roma 3 20063 cernusco sul naviglio (mi)") == "Via Roma 3, 20063 Cernusco sul Naviglio, MI"
+    assert sistema_indirizzo("via roma 3 20087 robecco sul naviglio (mi)") == "Via Roma 3, 20087 Robecco sul Naviglio, MI"
 
 
 def test_indirizzo_con_piu_civici():
@@ -95,7 +95,7 @@ def test_indirizzo_con_apostrofi():
 
 def test_indirizzo_con_la_parola_numero():
     assert sistema_indirizzo("via roma n. 3 milano") == "Via Roma 3, Milano"
-    assert sistema_indirizzo("Via Ponte n°33 Cernusco") == "Via Ponte 33, Cernusco"
+    assert sistema_indirizzo("Via Ponte n°33 Robecco") == "Via Ponte 33, Robecco"
 
 
 def test_indirizzo_con_bis():
@@ -104,11 +104,11 @@ def test_indirizzo_con_bis():
 
 
 def test_indirizzo_con_la_virgola_prima_del_civico():
-    assert sistema_indirizzo("via ponte, 33, cernusco, mi") == "Via Ponte 33, Cernusco, MI"
+    assert sistema_indirizzo("via ponte, 33, robecco, mi") == "Via Ponte 33, Robecco, MI"
 
 
 def test_indirizzo_con_la_parola_provincia():
-    assert sistema_indirizzo("via ponte 33 cernusco sul naviglio provincia di milano") == "Via Ponte 33, Cernusco sul Naviglio, MI"
+    assert sistema_indirizzo("via ponte 33 robecco sul naviglio provincia di milano") == "Via Ponte 33, Robecco sul Naviglio, MI"
 
 
 def test_provincia_che_fa_parte_del_nome():
@@ -117,12 +117,12 @@ def test_provincia_che_fa_parte_del_nome():
 
 
 def test_indirizzo_senza_civico_ma_con_la_virgola():
-    assert sistema_indirizzo("piazza salgari, cernusco sul naviglio") == "Piazza Salgari, Cernusco sul Naviglio"
+    assert sistema_indirizzo("piazza italia, robecco sul naviglio") == "Piazza Italia, Robecco sul Naviglio"
 
 
 def test_indirizzo_senza_civico_e_senza_virgole():
     # Qui non si può sapere dove finisce la via: si sistemano solo le maiuscole.
-    assert sistema_indirizzo("piazza salgari cernusco sul naviglio") == "Piazza Salgari Cernusco sul Naviglio"
+    assert sistema_indirizzo("piazza italia robecco sul naviglio") == "Piazza Italia Robecco sul Naviglio"
 
 
 def test_indirizzo_vuoto():
@@ -200,10 +200,10 @@ def test_indirizzo_con_interno_e_scala():
     assert sistema_indirizzo("via roma 10 int. 4 scala b milano") == "Via Roma 10 int. 4 scala B, Milano"
     assert sistema_indirizzo("via roma 10 scala b milano") == "Via Roma 10 scala B, Milano"
     assert sistema_indirizzo("Via Roma 10, interno 4, Milano") == "Via Roma 10 interno 4, Milano"
-    assert sistema_indirizzo("via roma 10 palazzina c cernusco sul naviglio mi") == "Via Roma 10 palazzina C, Cernusco sul Naviglio, MI"
+    assert sistema_indirizzo("via roma 10 palazzina c robecco sul naviglio mi") == "Via Roma 10 palazzina C, Robecco sul Naviglio, MI"
 
 
 def test_indirizzo_gia_sistemato_non_cambia_piu():
     # Chi corregge a mano un indirizzo già sistemato non deve vederselo cambiare di nuovo
-    for indirizzo in ("Via Roma 10 int. 4 scala B, Milano", "Via Ponte 33, Cernusco sul Naviglio, MI", "Viale 25 Aprile 4, Monza, MB"):
+    for indirizzo in ("Via Roma 10 int. 4 scala B, Milano", "Via Ponte 33, Robecco sul Naviglio, MI", "Viale 25 Aprile 4, Monza, MB"):
         assert sistema_indirizzo(indirizzo) == indirizzo

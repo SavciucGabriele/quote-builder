@@ -19,6 +19,7 @@ from genera_preventivo import (
     controlla_voce,
     euro,
     importo_voce,
+    manca,
     percorso_libero,
     scrivi_quantita,
     titolo_completo,
@@ -295,3 +296,55 @@ def test_titolo_lunghissimo_non_blocca_il_documento():
     documento, _ = componi_documento(preventivo, leggi_json(IMPRESA_ESEMPIO), bozza=False)
     assert len(documento.core_properties.title) <= 255
     assert preventivo["titolo"] in documento.tables[0].rows[1].cells[1].text     # Nella tabella il titolo resta intero
+
+
+# ---------------------------------------------------------------------------
+# Dopo il secondo controllo del codice (suggerimenti verificati uno per uno)
+# ---------------------------------------------------------------------------
+def test_manca_non_si_fa_ingannare_dagli_spazi():
+    assert manca({"cliente": "   "}, "cliente")
+    assert manca({"cliente": ""}, "cliente") and manca({}, "cliente") and manca({"cliente": None}, "cliente")
+    assert not manca({"cliente": "Mario Rossi"}, "cliente")
+    assert not manca({"importo": 0}, "importo")             # Zero è un valore vero
+
+
+def run_evidenziati(documento):
+    """I testi dei pezzi di Word passati con l'evidenziatore giallo, in tutto il documento (intestazione compresa)."""
+    from genera_preventivo import tutti_i_paragrafi
+    from docx.enum.text import WD_COLOR_INDEX
+    return [run.text for paragrafo in tutti_i_paragrafi(documento) for run in paragrafo.runs
+            if run.font.highlight_color == WD_COLOR_INDEX.YELLOW]
+
+
+def test_dati_mancanti_nell_intestazione_sono_evidenziati():
+    # Prima "da definire" al posto di cliente e indirizzo era scritto in nero normale: facile non vederlo
+    from genera_preventivo import componi_documento, leggi_json, IMPRESA_ESEMPIO
+    preventivo = preventivo_valido()
+    preventivo["cliente"], preventivo["indirizzo"], preventivo["data"] = "  ", "", ""
+    documento, _ = componi_documento(preventivo, leggi_json(IMPRESA_ESEMPIO), bozza=True)
+    evidenziati = run_evidenziati(documento)
+    assert len(evidenziati) == 3 and all(DA_DEFINIRE in testo for testo in evidenziati)
+
+
+def test_intestazione_completa_non_ha_niente_di_evidenziato():
+    from genera_preventivo import componi_documento, leggi_json, IMPRESA_ESEMPIO
+    documento, _ = componi_documento(preventivo_valido(), leggi_json(IMPRESA_ESEMPIO), bozza=False)
+    assert run_evidenziati(documento) == []
+
+
+def test_anche_le_celle_vuote_sono_centrate():
+    # Se la casella vuota viene poi compilata a mano in Word, il testo deve allinearsi come nelle altre righe
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from genera_preventivo import MODELLO, aggiungi_riga
+    riga = aggiungi_riga(Document(MODELLO).tables[0], ["1", "Rasatura", "mq", "24", "", "€ 700,00"])
+    assert riga.cells[4].text == ""
+    assert riga.cells[4].paragraphs[0].alignment == WD_ALIGN_PARAGRAPH.CENTER
+    assert riga.cells[1].paragraphs[0].alignment != WD_ALIGN_PARAGRAPH.CENTER      # La descrizione resta a sinistra
+
+
+def test_quantita_con_piu_di_tre_decimali_e_un_errore():
+    errori, _ = controlla_voce(1, {"descrizione": "Posa", "unita": "mq", "quantita": 10.3333333, "prezzo_unitario": 10})
+    assert errori == ['Voce 1 ("Posa"): "quantita" ha più di tre decimali']
+    errori, _ = controlla_voce(1, {"descrizione": "Getto", "unita": "mc", "quantita": 2.125, "prezzo_unitario": 10})
+    assert errori == []

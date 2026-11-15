@@ -99,7 +99,7 @@ def test_leggi_elenco_rifiuta_risposte_strane():
 # I controlli sulla correzione
 # ---------------------------------------------------------------------------
 def test_numeri():
-    assert numeri("Posa 2 porte da 80x210, spessore 2,5 cm") == ["2", "2,5", "210", "80"]
+    assert numeri("Posa 2 porte da 80x210, spessore 2,5 cm") == ["2", "2.5", "210", "80"]     # "2,5" viene scritto "2.5": vedi il test sul punto e la virgola più sotto
 
 
 def test_correzione_normale_accettata():
@@ -221,3 +221,22 @@ def test_certificati_mancanti_non_sembrano_un_problema_di_internet(monkeypatch):
     monkeypatch.setattr(correzione.urllib.request, "urlopen", urlopen_finto)
     with pytest.raises(ErroreCorrezione, match="certificato"):
         chiedi_a_gemini({}, "k", "m")
+
+
+# ---------------------------------------------------------------------------
+# Dopo il secondo controllo del codice
+# ---------------------------------------------------------------------------
+def test_punto_o_virgola_nei_decimali_e_lo_stesso_numero():
+    # "2.5 metri" corretto in "2,5 metri" è una correzione giusta: prima veniva scartata
+    assert numeri("Tubo da 2.5 metri") == numeri("Tubo da 2,5 metri")
+    assert accettabile("Tubo da 2.5 metri", "Tubo da 2,5 metri")
+
+
+def test_tre_cifre_dopo_il_punto_restano_un_caso_severo():
+    # "1.250" può voler dire milleduecentocinquanta, "1,250" uno virgola venticinque: qui non si accetta lo scambio
+    assert numeri("1.250 mq") != numeri("1,250 mq")
+    assert not accettabile("Scavo di 1.250 mq", "Scavo di 1,250 mq")
+
+
+def test_le_istruzioni_dicono_di_non_riscrivere_numeri_e_misure():
+    assert '"m2"' in correzione.ISTRUZIONI and "in lettere" in correzione.ISTRUZIONI

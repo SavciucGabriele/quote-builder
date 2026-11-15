@@ -22,7 +22,7 @@ def modulo_compilato():
         "tipo": "preventivo",
         "cliente": "De Luca Srl",
         "data": "2026-11-14",
-        "indirizzo": "via ponte 33 cernusco sul naviglio milano",
+        "indirizzo": "via ponte 33 robecco sul naviglio milano",
         "titolo": "rifacimento bagno",
         "voci": [
             {"descrizione": "Rimozione sanitari", "misura": "corpo", "quantita": "", "unita": "", "prezzo": "650€", "tipo_prezzo": "totale"},
@@ -88,7 +88,7 @@ def test_il_nome_del_cliente_non_viene_toccato():
     dati["cliente"] = "de luca SRL"
     preventivo, _ = leggi_modulo(dati)
     assert preventivo["cliente"] == "de luca SRL"
-    assert preventivo["indirizzo"] == "Via Ponte 33, Cernusco sul Naviglio, MI"
+    assert preventivo["indirizzo"] == "Via Ponte 33, Robecco sul Naviglio, MI"
 
 
 def test_nome_del_file():
@@ -108,7 +108,7 @@ def test_la_pagina_si_apre(browser):
 
 def test_anteprima_sistema_e_fa_i_conti(browser):
     dati = browser.post("/anteprima", json=modulo_compilato()).get_json()
-    assert dati["indirizzo"] == "Via Ponte 33, Cernusco sul Naviglio, MI"
+    assert dati["indirizzo"] == "Via Ponte 33, Robecco sul Naviglio, MI"
     assert dati["totale"] == "€ 1.680,00 + IVA"     # 650 + 700 + 6 x 55
     assert dati["voci"][0]["prezzo"] == "€ 650,00"
     assert dati["voci"][1]["dettaglio"] == "Totale voce € 700,00 - € 28,00 al mq"
@@ -411,3 +411,16 @@ def test_le_risposte_non_vanno_tenute_in_memoria_dal_browser(browser):
     assert risposta.headers["Cache-Control"] == "no-store"
     assert risposta.headers["X-Frame-Options"] == "DENY"
     assert "noindex" in risposta.headers["X-Robots-Tag"]
+
+
+# ---------------------------------------------------------------------------
+# Dopo il secondo controllo del codice
+# ---------------------------------------------------------------------------
+def test_avviso_se_la_quantita_supera_mille(browser):
+    # "1.250" scritto con il punto viene letto come milleduecentocinquanta: un avviso evita un errore di mille volte
+    modulo_ = modulo_compilato()
+    modulo_["voci"] = [voce_a_misura(quantita="1.250", unita="mc", prezzo="80", tipo_prezzo="unitario"), voce_a_misura(quantita="1,250", unita="mc")]
+    righe = browser.post("/anteprima", json=modulo_).get_json()["voci"]
+    assert righe[0]["attenzione"] == "Attenzione: la quantità è 1250 mc, più di mille. Se volevi un numero con la virgola (es. 1,25) scrivilo con la virgola, non con il punto."
+    assert righe[1]["attenzione"] == ""
+    assert browser.post("/crea", json=modulo_).status_code == 200      # È un avviso, non un blocco

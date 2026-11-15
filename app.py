@@ -32,7 +32,7 @@ import genera_preventivo as gp      # "as gp" è un soprannome: per usare euro()
 from pulizia import leggi_prezzo, leggi_quantita, pulisci_testo, sistema_indirizzo, sistema_unita
 
 CARTELLA_USCITA = gp.CARTELLA_USCITA                                # output/: dove finiscono i Word
-CARTELLA_ARCHIVIO = gp.CARTELLA / "data" / "raw" / "preventivi"     # Dove si salvano i dati di ogni preventivo creato (resta solo sul Mac)
+CARTELLA_ARCHIVIO = gp.CARTELLA / "data" / "raw" / "preventivi"     # Dove si salvano i dati di ogni preventivo creato (sul Mac restano; online, su Render, si cancellano a ogni riavvio)
 
 app = Flask(__name__)       # Crea il programma web. __name__ dice a Flask dove cercare la cartella templates/
 
@@ -260,6 +260,9 @@ def leggi_modulo(dati):
     return preventivo, problemi
 
 
+QUANTITA_INSOLITA = 1000        # Da questa quantità in su la pagina chiede di ricontrollare (vedi riassunto)
+
+
 def conti_possibili(voce):
     """True se con i numeri della voce si possono fare i conti.
 
@@ -278,7 +281,7 @@ def riassunto(preventivo, problemi):
 
     Restituisce un dizionario, per esempio:
         {"indirizzo": "Via Roma 1, Milano", "totale": "€ 700,00 + IVA",
-         "voci": [{"prezzo": "€ 700,00", "unita": "mq", "dettaglio": "Totale voce € 700,00 - € 28,00 al mq"}],
+         "voci": [{"prezzo": "€ 700,00", "unita": "mq", "dettaglio": "Totale voce € 700,00 - € 28,00 al mq", "attenzione": ""}],
          "errori": [], "mancanze": ["Manca: cliente"]}
     """
     errori, mancanze = gp.controlla_preventivo(preventivo)
@@ -286,10 +289,15 @@ def riassunto(preventivo, problemi):
 
     righe, totale = [], gp.Decimal("0")
     for voce in preventivo["voci"]:
-        riga = {"prezzo": "", "unita": voce.get("unita", ""), "dettaglio": ""}
+        riga = {"prezzo": "", "unita": voce.get("unita", ""), "dettaglio": "", "attenzione": ""}
         if not conti_possibili(voce):
             righe.append(riga)                  # Quantità a zero o numeri enormi: niente conti per questa voce (l'errore è già nell'elenco)
             continue
+        if voce.get("quantita", 0) >= QUANTITA_INSOLITA:
+            # "1.250" scritto con il punto viene letto alla maniera italiana, cioè milleduecentocinquanta.
+            # Se chi scrive intendeva 1,25 l'errore sarebbe di mille volte: non si blocca niente, ma lo si fa notare.
+            riga["attenzione"] = (f"Attenzione: la quantità è {gp.scrivi_quantita(voce['quantita'])} {voce.get('unita', '')}".rstrip()
+                                  + ", più di mille. Se volevi un numero con la virgola (es. 1,25) scrivilo con la virgola, non con il punto.")
         prezzo = voce.get("importo", voce.get("prezzo_unitario"))  # Il prezzo scritto, qualunque dei due sia; None se non c'è
         if prezzo is not None:
             riga["prezzo"] = gp.euro(prezzo)

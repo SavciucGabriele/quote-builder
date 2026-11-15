@@ -59,8 +59,11 @@ def leggi_json(percorso):
 
 
 def manca(dizionario, campo):
-    """Dice se un dato non c'è: campo assente, oppure scritto come null o come testo vuoto."""
-    return dizionario.get(campo) in (None, "")  # .get restituisce None se il campo non esiste. Output: True o False (es. manca({"importo": 0}, "importo") -> False, perché 0 è un valore vero)
+    """Dice se un dato non c'è: campo assente, oppure scritto come null, come testo vuoto o fatto di soli spazi."""
+    valore = dizionario.get(campo)              # .get restituisce None se il campo non esiste
+    if isinstance(valore, str):
+        return valore.strip() == ""             # Un testo di soli spazi ("   ") non è un dato: senza questo controllo nel Word uscirebbe una riga bianca
+    return valore is None                       # Output: True o False (es. manca({"importo": 0}, "importo") -> False, perché 0 è un valore vero)
 
 
 def e_un_numero(valore):
@@ -234,6 +237,8 @@ def controlla_voce(numero, voce):
     for campo in ("importo", "prezzo_unitario"):
         if not manca(voce, campo) and decimale(voce[campo]).as_tuple().exponent < -2:   # exponent conta le cifre dopo la virgola, in negativo: 10.005 -> -3, cioè tre decimali
             errori.append(f'{nome}: "{campo}" ha più di due decimali')
+    if not manca(voce, "quantita") and decimale(voce["quantita"]).as_tuple().exponent < -3:
+        errori.append(f'{nome}: "quantita" ha più di tre decimali')     # 10.3333333 non entrerebbe nella casella del Word. Tre decimali bastano anche per i metri cubi
     if not manca(voce, "quantita") and voce["quantita"] <= 0:
         errori.append(f'{nome}: "quantita" deve essere maggiore di zero')
 
@@ -336,6 +341,8 @@ def sostituisci_segnaposto(documento, valori):
                 segnaposto = "{{" + chiave + "}}"
                 if segnaposto in run.text:
                     run.text = run.text.replace(segnaposto, valore)
+                    if valore == DA_DEFINIRE:
+                        run.font.highlight_color = WD_COLOR_INDEX.YELLOW    # Un dato mancante si vede in giallo anche nell'intestazione, come nella tabella
                     # Questa serie di cicli for entra nei paragrafi, entra nei "run"
                     # (Word crea un nuovo "vagone" (un nuovo run) ogni volta che cambia la formattazione del testo),
                     # costruisce la stringa con le graffe (es. {{cliente}}) e se la trova nel testo,
@@ -358,16 +365,17 @@ def aggiungi_riga(tabella, testi, grassetto=()):    # testi: La lista di 6 strin
     # python-docx non ha un comando pronto per questo, quindi si scrive direttamente l'istruzione che usa Word ("cantSplit").
     riga._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
     for colonna, testo in enumerate(testi):     # enumerate fornisce il numero della colonna (0, 1, 2...) e il testo
+        paragrafo = riga.cells[colonna].paragraphs[0]   # Prende la cella corretta e seleziona il suo paragrafo di default
+        # La descrizione (colonna 1) resta a sinistra, tutto il resto è centrato. Si fa prima di guardare se il testo è vuoto:
+        # così, se una casella lasciata vuota viene compilata a mano in Word, il testo si allinea come nelle altre righe.
+        if colonna != 1:
+            paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if not testo:
             continue  # Se la stringa è vuota (es. unità di misura mancante), salta alla colonna dopo per non scrivere nulla.
-        paragrafo = riga.cells[colonna].paragraphs[0]   # Prende la cella corretta, seleziona il suo paragrafo di default,
-        run = paragrafo.add_run(testo)                  # ci inserisce il testo creando un nuovo "run"
+        run = paragrafo.add_run(testo)                  # Inserisce il testo creando un nuovo "run"
         run.bold = colonna in grassetto                 #  e accende il grassetto solo se il numero di questa colonna è stato indicato nella lista grassetto
         if testo == DA_DEFINIRE:
             run.font.highlight_color = WD_COLOR_INDEX.YELLOW    # Un dato mancante viene passato con l'evidenziatore giallo, così salta all'occhio
-        # La descrizione (colonna 1) resta a sinistra, tutto il resto è centrato.
-        if colonna != 1:
-            paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     return riga
 
 
@@ -397,9 +405,9 @@ def componi_documento(preventivo, impresa, bozza):
 
     # 1. Intestazione e piè di pagina
     sostituisci_segnaposto(documento, {
-        "cliente": preventivo.get("cliente") or DA_DEFINIRE,    # "x or y" usa y quando x è vuoto o None
-        "indirizzo": preventivo.get("indirizzo") or DA_DEFINIRE,
-        "data": scrivi_data(preventivo.get("data")),
+        "cliente": DA_DEFINIRE if manca(preventivo, "cliente") else preventivo["cliente"],     # Se il dato manca (anche se è fatto di soli spazi) al suo posto va "da definire"
+        "indirizzo": DA_DEFINIRE if manca(preventivo, "indirizzo") else preventivo["indirizzo"],
+        "data": DA_DEFINIRE if manca(preventivo, "data") else scrivi_data(preventivo["data"]),
         "impresa_nome": impresa["nome"],
         "impresa_indirizzo": impresa["indirizzo"],
         "impresa_telefono": impresa["telefono"],

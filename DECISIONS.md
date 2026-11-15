@@ -1,4 +1,6 @@
 # Decisioni
+Lo strumento è nato per aiutare mio padre, che ha una piccola impresa edile:
+è lui "il titolare" di cui si parla qui sotto.
 
 ## 2026-11-09 — Niente listino prezzi fisso
 Le voci cambiano da un lavoro all'altro e il prezzo dipende dal cantiere.
@@ -60,10 +62,10 @@ così una correzione fatta a mano non va persa. Il titolo viene stampato com'è
 scritto nei dati, senza toccare maiuscole e minuscole.
 
 ## 2026-11-10 — L'ingresso è una conversazione, non una dettatura unica
-Dalle sue chat con ChatGPT: manda messaggi brevi, risponde alle domande e
-corregge i dati strada facendo (25 metri diventano 28). Lo strumento terrà un
-preventivo in bozza e lo aggiornerà a ogni messaggio: un dato nuovo sostituisce
-quello vecchio, e l'elenco delle cose mancanti diventa la lista delle domande.
+Quando si detta un preventivo si mandano messaggi brevi e si correggono i dati
+strada facendo (25 metri diventano 28). Lo strumento terrà un preventivo in
+bozza e lo aggiornerà a ogni messaggio: un dato nuovo sostituisce quello
+vecchio, e l'elenco delle cose mancanti diventa la lista delle domande.
 
 ## 2026-11-10 — Le descrizioni non aggiungono lavorazioni
 Il modello può scrivere descrizioni complete, prendendo come esempio quelle già
@@ -72,14 +74,15 @@ descritta è un impegno con il cliente. Prima del documento finale la bozza
 viene sempre mostrata.
 
 ## 2026-11-10 — I prezzi li mette il titolare, lo strumento ricorda quelli passati
-Il titolare usa ChatGPT solo per farsi un'idea dei prezzi di mercato, poi mette
-i suoi. Lo strumento non stima prezzi: suggerisce quelli già usati per lavori
-simili, presi dall'archivio; se non ce ne sono, la casella resta "da definire".
+I prezzi li decide il titolare, lavoro per lavoro. Lo strumento non stima
+prezzi: suggerisce quelli già usati per lavori simili, presi dall'archivio;
+se non ce ne sono, la casella resta "da definire".
 
 ## 2026-11-10 — Il valore principale è la scrittura professionale
-Il titolare fatica con la lingua: la parte più utile è trasformare quello che
-dice in descrizioni da preventivo, nello stile dei suoi documenti, prendendoli
-come esempio e senza aggiungere lavorazioni non nominate.
+Scrivere le descrizioni è la parte che porta via più tempo, quindi la più
+utile è trasformare quello che il titolare dice in descrizioni da preventivo,
+nello stile dei suoi documenti, prendendoli come esempio e senza aggiungere
+lavorazioni non nominate.
 
 ## 2026-11-13 — Lo strumento propone, non inserisce
 Rivede la decisione del 10/11 sulle descrizioni. Nel documento entra solo ciò
@@ -89,10 +92,10 @@ usati per lavori simili, dettagli tipici di una lavorazione. Ogni proposta va
 confermata prima di entrare nella bozza.
 
 ## 2026-11-13 — Una domanda alla volta, e solo se serve al documento
-Nelle chat con ChatGPT il titolare non risponde agli elenchi di domande
-("Si grazie" a tre domande), mentre risponde sempre a una domanda singola.
-Lo strumento chiede una cosa per volta. Le misure si scrivono come le dice lui
-("25 mt"), senza indovinare se sono metri lineari, quadri o cubi.
+A un elenco di domande si risponde spesso solo in parte, a una domanda
+singola quasi sempre. Lo strumento chiede una cosa per volta. Le misure si
+scrivono come vengono dette ("25 mt"), senza indovinare se sono metri
+lineari, quadri o cubi.
 
 ## 2026-11-13 — I messaggi possono essere comandi sulla bozza
 Oltre ad aggiungere o correggere un dato, un messaggio può chiedere una
@@ -100,12 +103,12 @@ modifica a tutta la bozza ("aumenta di 20%"). Il modello riconosce il comando,
 il conto lo fa il codice.
 
 ## 2026-11-14 — Modulo guidato al posto della conversazione
-Deciso con il titolare. Per prezzi e consigli continua a usare ChatGPT; il
-nostro programma serve a compilare e impaginare. L'interfaccia è una pagina
-con i campi in ordine (spettabile, data, luogo, poi per ogni voce descrizione,
-a corpo o a metri, prezzo). Ogni campo si può dettare o scrivere a mano.
-Sostituisce le decisioni del 10/11 e del 13/11 su conversazione, domande e
-comandi sulla bozza.
+Deciso con il titolare. Prezzi e consigli restano fuori dal programma, che
+serve a compilare e impaginare. L'interfaccia è una pagina con i campi in
+ordine (spettabile, data, luogo, poi per ogni voce descrizione, a corpo o a
+metri, prezzo). Ogni campo si può dettare o scrivere a mano. Sostituisce le
+decisioni del 10/11 e del 13/11 su conversazione, domande e comandi sulla
+bozza.
 
 ## 2026-11-14 — Chi tocca cosa
 Il nome del cliente resta esattamente come viene scritto. Prezzi e indirizzi
@@ -141,3 +144,10 @@ titolare, e un prezzo arrotondato non farebbe tornare il conto al cliente.
 - Provate migliaia di richieste con valori strani: trovati e corretti sei casi in cui il programma andava in errore (quantità a zero con prezzo totale, indirizzi con scala e interno, luogo di sole virgole, titolo lunghissimo, caratteri invisibili, numeri enormi).
 - L'indirizzo per scaricare il Word non contiene più il nome del cliente: restava nei registri del server.
 - La pagina chiede al browser di non tenere copie e ai motori di ricerca di non elencarla.
+
+## 2026-11-15 — Secondo controllo, con i suggerimenti di un altro modello
+- Fatto rileggere il codice a Gemini e verificato ogni suggerimento con una prova: sette applicati, cinque scartati (uno diceva che il modello in uso non esiste, ed era falso).
+- I dati mancanti sono evidenziati in giallo anche nell'intestazione del Word.
+- Una quantità sopra mille fa comparire un avviso: "1.250" con il punto viene letto come milleduecentocinquanta, e il programma non prova a indovinare.
+- Nel controllo delle correzioni "2.5" e "2,5" valgono come lo stesso numero, "1.250" e "1,250" no.
+- Regola imparata: un suggerimento si prova prima di applicarlo, da chiunque arrivi.

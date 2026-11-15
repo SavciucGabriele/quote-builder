@@ -5,8 +5,8 @@ il risultato è sempre lo stesso e si può controllare con i test.
 
     leggi_prezzo("593€")     -> Decimal("593.00")
     sistema_prezzo("593€")   -> "€ 593,00"
-    sistema_indirizzo("via ponte 33 Cernusco sul Naviglio milano")
-                             -> "Via Ponte 33, Cernusco sul Naviglio, MI"
+    sistema_indirizzo("via ponte 33 Robecco sul Naviglio milano")
+                             -> "Via Ponte 33, Robecco sul Naviglio, MI"
 
 Quando una funzione non capisce il testo non tira a indovinare: leggi_prezzo
 restituisce None, sistema_indirizzo si limita a mettere le maiuscole.
@@ -99,7 +99,7 @@ def sistema_prezzo(testo):
 # ---------------------------------------------------------------------------
 # INDIRIZZI
 # ---------------------------------------------------------------------------
-# Parole che in un indirizzo restano minuscole: "Cernusco sul Naviglio", "Via dei Mille".
+# Parole che in un indirizzo restano minuscole: "Robecco sul Naviglio", "Via dei Mille".
 # Gli articoli da soli (la, lo, il...) non ci sono, perché in mezzo a una via di solito
 # fanno parte di un cognome: "Via La Pira".
 PREPOSIZIONI = {
@@ -158,7 +158,7 @@ def _maiuscola(parola, prima):
     """Mette le maiuscole giuste a una parola. 'prima' è True se è la prima parola del pezzo."""
     minuscola = parola.lower()
     if parola[0].isdigit():
-        return parola.upper().replace("BIS", "bis").replace("TER", "ter")   # Numeri civici e CAP: '33a' -> '33A', '12bis' resta '12bis', '20063' resta uguale
+        return parola.upper().replace("BIS", "bis").replace("TER", "ter")   # Numeri civici e CAP: '33a' -> '33A', '12bis' resta '12bis', '20087' resta uguale
     if minuscola in ("bis", "ter"):
         return minuscola                                # '12 bis': resta minuscolo
     if not prima and minuscola.rstrip(".") in PAROLE_INTERNO:
@@ -205,7 +205,7 @@ def _posizione_civico(parole):
 def _stacca_provincia(parole):
     """Separa il comune dalla provincia. Restituisce (parole del comune, sigla).
 
-    ['Cernusco', 'sul', 'Naviglio', 'milano'] -> (['Cernusco', 'sul', 'Naviglio'], 'MI')
+    ['Robecco', 'sul', 'Naviglio', 'milano'] -> (['Robecco', 'sul', 'Naviglio'], 'MI')
     Se la provincia non c'è, la sigla è una stringa vuota.
     """
     pulite = [parola.strip("()").lower() for parola in parole]  # Toglie le parentesi e mette in minuscolo: '(MI)' -> 'mi'
@@ -233,7 +233,7 @@ def _stacca_provincia(parole):
 def sistema_indirizzo(testo):
     """Mette in ordine un indirizzo scritto di getto.
 
-    'via ponte 33 Cernusco sul Naviglio milano' -> 'Via Ponte 33, Cernusco sul Naviglio, MI'
+    'via ponte 33 Robecco sul Naviglio milano' -> 'Via Ponte 33, Robecco sul Naviglio, MI'
 
     Funziona quando c'è il numero civico oppure ci sono già le virgole. Se non
     riesce a capire dove finisce la via, sistema solo le maiuscole.
@@ -253,7 +253,7 @@ def sistema_indirizzo(testo):
         via = prima_parte[:posizione + 1]                       # Dall'inizio fino al civico compreso
         resto = prima_parte[posizione + 1:] + dopo              # Quello che viene dopo il civico: comune, provincia, CAP
     elif dopo and CIVICO.fullmatch(dopo[0]) and not CAP.fullmatch(dopo[0]):
-        via, resto = prima_parte + dopo[:1], dopo[1:]           # 'via Ponte, 33, Cernusco': il civico è subito dopo la virgola, lo riattacco alla via
+        via, resto = prima_parte + dopo[:1], dopo[1:]           # 'via Ponte, 33, Robecco': il civico è subito dopo la virgola, lo riattacco alla via
     elif dopo:
         via, resto = prima_parte, dopo                          # Niente civico, ma c'è una virgola che dice dove finisce la via
     else:
@@ -274,7 +274,7 @@ def sistema_indirizzo(testo):
 
     risultato = [
         _maiuscole(via),                                        # 'Via Ponte 33'
-        " ".join(cap + [_maiuscole(comune)]).strip(),           # '20063 Cernusco sul Naviglio' (il CAP solo se c'era)
+        " ".join(cap + [_maiuscole(comune)]).strip(),           # '20087 Robecco sul Naviglio' (il CAP solo se c'era)
         sigla,                                                  # 'MI'
     ]
     return ", ".join(pezzo for pezzo in risultato if pezzo)     # Unisce con le virgole solo i pezzi non vuoti

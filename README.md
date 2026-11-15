@@ -16,7 +16,8 @@ user and the domain are.*
 
 ## Il problema
 
-Il titolare sa che cosa mettere nel preventivo, ma scriverlo al computer e
+L'ho fatto per aiutare mio padre, che ha una piccola impresa edile. 
+Lui sa che cosa mettere nel preventivo, ma scriverlo al computer e
 impaginarlo gli costa molto tempo, e i documenti restano arretrati. Nei
 documenti fatti a mano finiscono anche errori di somma e di formato.
 
@@ -28,8 +29,8 @@ compilato in circa cinque minuti.
 1. **Si compila la pagina.** Cliente, data, luogo, lavoro e poi le voci. Ogni
    casella si può scrivere o dettare con il microfono della tastiera.
 2. **Il codice sistema e controlla.** `593€` diventa `€ 593,00`,
-   `via ponte 33 cernusco sul naviglio milano` diventa
-   `Via Ponte 33, Cernusco sul Naviglio, MI`. Il totale si aggiorna mentre si
+   `via ponte 33 robecco sul naviglio milano` diventa
+   `Via Ponte 33, Robecco sul Naviglio, MI`. Il totale si aggiorna mentre si
    scrive.
 3. **Se serve, si corregge l'italiano.** Un pulsante manda le sole descrizioni
    dei lavori a un modello linguistico (Gemini), che corregge ortografia e
@@ -111,6 +112,7 @@ chiave e dati dell'impresa dalle variabili d'ambiente invece che dal file
 - La pulizia degli indirizzi segue delle regole: funziona con gli indirizzi
   italiani più comuni, non con tutti.
 - La password è una sola, uguale per chi usa la pagina.
+- Online, con il piano gratuito di Render, la pagina si spegne dopo 15 minuti senza uso e la prima apertura richiede circa un minuto.
 
 ## Dati
 
@@ -119,7 +121,10 @@ inventati. I dati veri dell'impresa e i preventivi stanno fuori da Git.
 
 ## Come è stato sviluppato
 
-È il mio primo progetto di questo tipo. L'ho sviluppato con l'aiuto di un
-assistente AI (Claude), a piccoli passi: le scelte sono annotate in
-`DECISIONS.md` e i file Python sono commentati riga per riga, perché
-l'obiettivo era anche capire tutto il codice.
+È il mio primo progetto di questo tipo. Il codice l'ha scritto un assistente
+AI (Claude), su mie indicazioni. La parte mia è stata capire il problema
+insieme a mio padre, che usa lo strumento; decidere che cosa doveva fare e
+che cosa no (le scelte e i motivi sono in [DECISIONS.md](DECISIONS.md));
+provare ogni versione con lui e riportare i problemi; metterlo online. I file
+Python sono commentati riga per riga perché l'obiettivo era anche capire
+tutto il codice.

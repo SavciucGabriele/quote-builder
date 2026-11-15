@@ -43,6 +43,7 @@ Regole da rispettare sempre:
 - non aggiungere lavori, materiali, misure o dettagli che non sono scritti;
 - non togliere nessun lavoro o materiale;
 - non cambiare numeri, misure, marche e nomi di prodotti;
+- lascia numeri e misure scritti come sono: non trasformare "m2" in "mq" né "m3" in "mc", e non riscrivere in lettere un numero scritto in cifre (o il contrario);
 - non riscrivere le frasi e non cambiare lo stile: tieni le sue parole e il loro ordine ogni volta che sono corrette;
 - se una descrizione è già corretta, restituiscila identica;
 - se non capisci una parola, lasciala com'è;
@@ -140,8 +141,14 @@ def leggi_elenco(testo, quante):
 
 
 def numeri(testo):
-    """I numeri che compaiono in un testo, in ordine: 'Posa 2 porte da 80x210' -> ['2', '210', '80']."""
-    return sorted(re.findall(r"\d+(?:[.,]\d+)?", testo))        # \d+ è un gruppo di cifre; (?:[.,]\d+)? prende anche i decimali, es. "2,5"
+    """I numeri che compaiono in un testo, in ordine: 'Posa 2 porte da 80x210' -> ['2', '210', '80'].
+
+    "2.5" e "2,5" sono lo stesso numero, quindi vengono scritti tutti e due "2.5": correggere il punto
+    in virgola non deve far scartare la correzione. Con tre cifre dopo il segno invece non si tocca niente:
+    "1.250" può voler dire milleduecentocinquanta e "1,250" uno virgola venticinque, e lì è meglio essere severi.
+    """
+    trovati = re.findall(r"\d+(?:[.,]\d+)?", testo)             # \d+ è un gruppo di cifre; (?:[.,]\d+)? prende anche i decimali, es. "2,5"
+    return sorted(re.sub(r",(\d{1,2})$", r".\1", numero) for numero in trovati)     # Solo se dopo la virgola ci sono una o due cifre: "2,5" -> "2.5", "1,250" resta com'è
 
 
 def accettabile(originale, corretta):
