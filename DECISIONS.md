@@ -119,3 +119,19 @@ calcola il codice), a misura con il totale già deciso (il costo unitario lo
 ricava il codice). Nel terzo caso, se la divisione non torna precisa al
 centesimo, il costo unitario non viene stampato: conta il totale deciso dal
 titolare, e un prezzo arrotondato non farebbe tornare il conto al cliente.
+
+## 2026-11-15 — Correzione dell'italiano con Gemini
+- Prima prova vera: mio padre ha fatto un preventivo da 16 voci in circa 5 minuti.
+- Corretto: il totale si aggiornava solo uscendo dalla casella del prezzo. Ora si aggiorna mentre si scrive.
+- Nuovo pulsante "Sistema il testo": manda a Gemini solo le descrizioni, mai cliente, luogo o prezzi.
+- La correzione non è mai automatica: sotto ogni descrizione cambiata resta il testo di prima, con "Rimetti il mio testo".
+- Il codice scarta le correzioni che cambiano un numero o la lunghezza del testo: meglio un errore di italiano che un lavoro inventato.
+- Niente libreria di Google: la chiamata è fatta con la libreria standard, per avere meno dipendenze e capire ogni riga.
+- La chiave sta in .env (fuori da Git). Il modello è gemini-3.5-flash-lite e si può cambiare da .env.
+
+## 2026-11-15 — Password d'accesso, in vista della pagina online
+- Il pulsante "Sistema il testo" funziona con la chiave vera. Sul Mac servivano i certificati di Python ("Install Certificates.command"): ora quell'errore ha un messaggio suo.
+- La pagina si apre solo con una password (PASSWORD_PAGINA in .env). Senza password impostata resta chiusa: meglio chiusa per errore che aperta per errore.
+- Dopo l'accesso si resta dentro 30 giorni. Dopo 8 password sbagliate in 10 minuti la pagina si blocca per 10 minuti.
+- Online i dati dell'impresa arriveranno da un'impostazione segreta (IMPRESA_JSON), perché data/raw non è su GitHub.
+- Se nel Word finiscono i dati dell'impresa di esempio, la pagina avvisa.

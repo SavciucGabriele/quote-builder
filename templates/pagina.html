@@ -35,6 +35,12 @@
     .errori { background: #fde8e6; color: var(--rosso); }
     .mancanze { background: var(--giallo); color: #5c4400; }
     .fatto { background: #e3f4e5; color: #1d5a27; }
+    /* Il riquadro sotto una descrizione corretta: mostra il testo di prima, per confrontarlo. */
+    .prima { background: var(--giallo); color: #5c4400; border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 15px; }
+    .prima strong { display: block; font-size: 13px; }
+    .rimetti { background: none; border: none; color: var(--blu); padding: 6px 0 0; font-size: 14px; text-decoration: underline; }
+    #sistema { margin-top: 10px; }
+    #sistema + .aiuto { margin-top: 8px; }
     /* La barra in fondo resta sempre visibile mentre si scorre: mostra il totale e il pulsante. */
     .barra { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--bordo); }
     .barra div { max-width: 720px; margin: 0 auto; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -77,6 +83,9 @@
   <div id="voci"></div>
 
   <button type="button" class="secondario" id="aggiungi">+ Aggiungi voce</button>
+  <button type="button" class="secondario" id="sistema">Sistema il testo delle descrizioni</button>
+  <p class="aiuto">Corregge gli errori di italiano senza cambiare quello che hai scritto. Nomi, luoghi e prezzi non vengono toccati.</p>
+  <p class="aiuto"><a href="/esci">Esci</a> (per rientrare servirà la password)</p>
 </main>
 
 <div class="barra">
@@ -93,6 +102,12 @@
 
     <label>Descrizione</label>
     <textarea class="descrizione" placeholder="Cosa viene fatto"></textarea>
+    <!-- Compare solo dopo "Sistema il testo", se la descrizione è stata corretta: fa vedere com'era prima -->
+    <div class="prima nascosto">
+      <strong>Prima era:</strong>
+      <span class="testo-prima"></span>
+      <button type="button" class="rimetti">Rimetti il mio testo</button>
+    </div>
 
     <label>Misura</label>
     <select class="misura">
@@ -209,10 +224,21 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(leggiModulo()),
       });
+      if (risposta.status === 401) return { ok: false, dati: null, scaduta: true };     // Sono passati più di 30 giorni dall'ultima volta: serve di nuovo la password
       return { ok: risposta.ok, dati: await risposta.json() };
     } catch (errore) {
       return { ok: false, dati: null };
     }
+  }
+
+  // L'avviso per quando la password va riscritta. La pagina per entrare si apre in un'altra scheda,
+  // così quello che è già stato scritto qui non va perso.
+  function avvisoSessioneScaduta() {
+    const div = riquadro("errori", "Devi rientrare con la password. ", []);
+    const collegamento = document.createElement("a");
+    collegamento.href = "/accesso"; collegamento.target = "_blank"; collegamento.textContent = "Tocca qui per rientrare";
+    div.append(collegamento, ", poi torna su questa scheda e riprova: quello che hai scritto è ancora qui.");
+    return div;
   }
 
   // Scrive un riquadro colorato con un titolo e un elenco di frasi.
@@ -245,7 +271,8 @@
     const mia = ++ultimaRichiesta;
     const compilate = vociCompilate();                  // Le voci compilate nel momento in cui parte la richiesta: le risposte di Python si abbinano a queste
     const inviato = casella ? casella.value : null;     // Cosa c'era scritto nella casella quando è partita la richiesta
-    const { dati } = await chiedi("/anteprima");
+    const { dati, scaduta } = await chiedi("/anteprima");
+    if (scaduta) { messaggi.replaceChildren(avvisoSessioneScaduta()); return; }
     if (!dati) { messaggi.replaceChildren(riquadro("errori", NON_RAGGIUNGIBILE, [])); return; }
 
     // Una casella si riscrive solo se nel frattempo non è stata modificata di nuovo: altrimenti si cancellerebbe quello che si sta scrivendo.
@@ -284,15 +311,18 @@
     pulsante.disabled = true;                           // Spento finché non arriva la risposta: un secondo tocco non crea un secondo file
     pulsante.textContent = "Sto creando...";
     try {
-      const { ok, dati } = await chiedi("/crea");
+      const { ok, dati, scaduta } = await chiedi("/crea");
       messaggi.replaceChildren();
-      if (!dati) {
+      if (scaduta) {
+        messaggi.appendChild(avvisoSessioneScaduta());
+      } else if (!dati) {
         messaggi.appendChild(riquadro("errori", NON_RAGGIUNGIBILE, []));
       } else if (!ok) {
         messaggi.appendChild(riquadro("errori", "Il preventivo non è stato creato. Da correggere:", dati.errori));
       } else {
         if (dati.bozza) messaggi.appendChild(riquadro("mancanze", "Creato come BOZZA. Mancano ancora:", dati.mancanze));
         else messaggi.appendChild(riquadro("fatto", "Preventivo creato: " + dati.file + " (" + dati.totale + ")", []));
+        if (dati.avvisi.length) messaggi.appendChild(riquadro("mancanze", "Attenzione:", dati.avvisi));
         window.location = "/scarica/" + encodeURIComponent(dati.file);
       }
     } finally {
@@ -302,17 +332,97 @@
     window.scrollTo({ top: 0, behavior: "smooth" });    // Torna in cima, dove sta il messaggio
   }
 
+  // Corregge l'italiano delle descrizioni. A Python (e da lì a Gemini) vanno solo i testi delle descrizioni:
+  // niente cliente, luogo o prezzi. Ogni descrizione cambiata mostra sotto il testo di prima, per poter tornare indietro.
+  async function sistema() {
+    const pulsante = document.getElementById("sistema");
+    if (pulsante.disabled) return;
+    const caselle = [...voci.querySelectorAll(".descrizione")];
+    const inviate = caselle.map(casella => casella.value);          // I testi come sono adesso, es. ["posa piato docia", ""]
+    if (!inviate.some(testo => testo.trim() !== "")) {
+      messaggi.replaceChildren(riquadro("mancanze", "Non c'è ancora nessuna descrizione da sistemare.", []));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    pulsante.disabled = true;
+    pulsante.textContent = "Sto sistemando...";
+    let dati = null, scaduta = false;
+    try {
+      const risposta = await fetch("/sistema", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descrizioni: inviate }),
+      });
+      scaduta = risposta.status === 401;
+      dati = await risposta.json();
+    } catch (errore) {
+      dati = null;                                                  // Programma spento o risposta illeggibile
+    } finally {
+      pulsante.disabled = false;
+      pulsante.textContent = "Sistema il testo delle descrizioni";
+    }
+
+    messaggi.replaceChildren();
+    if (scaduta) {
+      messaggi.appendChild(avvisoSessioneScaduta());
+    } else if (!dati) {
+      messaggi.appendChild(riquadro("errori", NON_RAGGIUNGIBILE, []));
+    } else if (dati.errore) {
+      messaggi.appendChild(riquadro("errori", dati.errore, []));    // Es. manca la chiave, niente internet, limite superato
+    } else {
+      let cambiate = 0;
+      const scartate = [];                                          // I numeri delle voci lasciate com'erano, es. [3, 7]
+      dati.descrizioni.forEach((corretta, posizione) => {
+        const casella = caselle[posizione];
+        if (corretta.scartata) scartate.push(posizione + 1);
+        // Si riscrive solo se la correzione c'è e se nel frattempo la casella non è stata toccata o tolta.
+        if (!corretta.cambiata || !casella.isConnected || casella.value !== inviate[posizione]) return;
+        const voce = casella.closest(".voce");
+        const prima = voce.querySelector(".prima");
+        if (prima.classList.contains("nascosto")) voce.querySelector(".testo-prima").textContent = inviate[posizione];   // Se il riquadro c'è già, resta il primissimo testo
+        prima.classList.remove("nascosto");
+        casella.value = corretta.testo;
+        cambiate++;
+      });
+      const frasi = [];
+      if (scartate.length) frasi.push((scartate.length === 1 ? "La voce " + scartate[0] + " è rimasta com'era" : "Le voci " + scartate.join(", ") + " sono rimaste com'erano") + ": la correzione proposta cambiava troppo il testo." + (scartate.length === 1 ? " Controllala tu." : " Controllale tu."));
+      if (cambiate) {
+        frasi.unshift("Rileggile: sotto ognuna c'è il testo di prima. Se preferisci il tuo, premi \"Rimetti il mio testo\".");
+        messaggi.appendChild(riquadro("fatto", cambiate === 1 ? "Ho sistemato 1 descrizione." : "Ho sistemato " + cambiate + " descrizioni.", frasi));
+      } else {
+        messaggi.appendChild(riquadro("fatto", "Non ho cambiato niente: le descrizioni vanno già bene così.", frasi));
+      }
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   // Cosa succede quando si tocca qualcosa.
   document.getElementById("aggiungi").addEventListener("click", aggiungiVoce);
   document.getElementById("crea").addEventListener("click", crea);
+  document.getElementById("sistema").addEventListener("click", sistema);
   voci.addEventListener("click", evento => {
     if (evento.target.classList.contains("togli")) { evento.target.closest(".voce").remove(); rinumera(); aggiorna(); }
+    if (evento.target.classList.contains("rimetti")) {              // Torna al testo scritto da lui e nasconde il riquadro
+      const voce = evento.target.closest(".voce");
+      voce.querySelector(".descrizione").value = voce.querySelector(".testo-prima").textContent;
+      voce.querySelector(".prima").classList.add("nascosto");
+    }
   });
   // "change" scatta quando si esce da una casella dopo averla modificata, o si cambia una scelta.
+  // È il momento in cui la casella viene anche riscritta in bella copia ("593€" -> "€ 593,00").
+  let attesa = null;            // Il timer dell'aggiornamento "mentre si scrive" (vedi sotto)
   document.addEventListener("change", evento => {
+    clearTimeout(attesa);       // Sta già partendo un aggiornamento completo: quello in attesa non serve più
     const voce = evento.target.closest(".voce");
     if (voce) mostraCampiMisura(voce);
     aggiorna(evento.target);
+  });
+  // "input" scatta a ogni tasto premuto e a ogni parola dettata, senza aspettare che si esca dalla casella.
+  // Serve per il totale: senza, cambiando un prezzo il totale restava quello vecchio finché non si toccava altrove.
+  // Per non chiamare Python a ogni tasto si aspetta mezzo secondo di pausa: ogni nuovo tasto fa ripartire il timer.
+  document.addEventListener("input", () => {
+    clearTimeout(attesa);
+    attesa = setTimeout(() => aggiorna(), 500);     // aggiorna() senza casella: ricalcola totale e righe ma non riscrive niente, per non disturbare chi sta scrivendo
   });
 
   aggiungiVoce();     // Si parte con una voce già pronta

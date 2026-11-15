@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preventivi - Entra</title>
+  <link rel="icon" href="data:,">
+  <style>
+    /* Stessi colori e stesse misure della pagina dei preventivi. */
+    :root { --blu: #1f3a5f; --grigio: #5b6470; --bordo: #cfd6de; --sfondo: #f4f6f8; --rosso: #b42318; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sfondo); color: #1a1f26; font: 17px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    main { max-width: 420px; margin: 0 auto; padding: 48px 16px; }
+    h1 { font-size: 24px; margin: 0 0 16px; color: var(--blu); }
+    .scheda { background: #fff; border: 1px solid var(--bordo); border-radius: 12px; padding: 16px; }
+    label { display: block; font-size: 14px; font-weight: 600; color: var(--grigio); margin-bottom: 4px; }
+    input { width: 100%; font: inherit; padding: 11px 12px; border: 1px solid var(--bordo); border-radius: 8px; }
+    input:focus { outline: 2px solid var(--blu); outline-offset: 1px; }
+    button { width: 100%; margin-top: 14px; font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 16px; cursor: pointer; background: var(--blu); color: #fff; border: 1px solid var(--blu); }
+    .avviso { border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 15px; background: #fde8e6; color: var(--rosso); }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Preventivi</h1>
+  {% if manca %}
+    <!-- Nessuna password impostata: la pagina resta chiusa e spiega cosa fare. -->
+    <div class="avviso">
+      La pagina è chiusa perché non è stata ancora scelta una password.<br>
+      Aggiungi al file <code>.env</code> la riga <code>PASSWORD_PAGINA=...</code> con almeno {{ minima }} caratteri, poi riavvia il programma.
+    </div>
+  {% else %}
+    {% if errore %}<div class="avviso">{{ errore }}</div>{% endif %}
+    <form method="post" class="scheda">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+      <button type="submit">Entra</button>
+    </form>
+  {% endif %}
+</main>
+</body>
+</html>

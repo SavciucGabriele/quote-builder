@@ -8,6 +8,8 @@ Non serve aprire il browser: Flask ha un "finto browser" (test_client) che
 manda le richieste alla pagina e legge le risposte.
 """
 
+import json
+
 import pytest
 
 import app as modulo
@@ -36,6 +38,18 @@ def browser(tmp_path, monkeypatch):
     monkeypatch.setattr(modulo, "CARTELLA_USCITA", tmp_path / "output")         # monkeypatch cambia una variabile solo per la durata del test
     monkeypatch.setattr(modulo, "CARTELLA_ARCHIVIO", tmp_path / "archivio")
     monkeypatch.setattr(modulo.gp, "IMPRESA_VERA", tmp_path / "non_esiste.json")   # Così i test usano sempre l'impresa di esempio
+    monkeypatch.delenv("IMPRESA_JSON", raising=False)
+    monkeypatch.setenv("PASSWORD_PAGINA", "password-di-prova")                  # setenv imposta una variabile del computer solo per la durata del test
+    monkeypatch.setitem(modulo.app.config, "SESSION_COOKIE_SECURE", False)      # Il finto browser lavora in http, come sul proprio computer
+    modulo.tentativi_sbagliati.clear()
+    cliente = modulo.app.test_client()
+    cliente.post("/accesso", data={"password": "password-di-prova"})            # Entra, come farebbe una persona
+    return cliente
+
+
+@pytest.fixture
+def fuori(browser):
+    """Un finto browser che NON è entrato con la password."""
     return modulo.app.test_client()
 
 
@@ -203,3 +217,123 @@ def test_modulo_storto_non_manda_in_crash():
 def test_nome_del_file_toglie_gli_accenti_senza_perdere_lettere():
     preventivo = {"cliente": "Ștefan Țurcanu & Società", "titolo": "Bagno"}
     assert nome_del_file(preventivo, bozza=False) == "stefan_turcanu_societa_bagno"
+
+
+# ---------------------------------------------------------------------------
+# Il pulsante "Sistema il testo"
+# ---------------------------------------------------------------------------
+def test_sistema_il_testo(browser, monkeypatch):
+    # Al posto della vera correzione (che chiamerebbe Gemini) ne metto una finta
+    viste = []
+    def correzione_finta(descrizioni):
+        viste.append(descrizioni)
+        return [{"testo": "Posa piatto doccia", "cambiata": True, "scartata": False}]
+    monkeypatch.setattr(modulo.correzione, "sistema_descrizioni", correzione_finta)
+
+    risposta = browser.post("/sistema", json={"descrizioni": ["posa piato docia"]})
+    assert risposta.status_code == 200
+    assert risposta.get_json() == {"descrizioni": [{"testo": "Posa piatto doccia", "cambiata": True, "scartata": False}]}
+    assert viste == [["posa piato docia"]]
+
+
+def test_sistema_il_testo_quando_la_correzione_non_e_disponibile(browser, monkeypatch):
+    def correzione_rotta(descrizioni):
+        raise modulo.correzione.ErroreCorrezione("manca la chiave")
+    monkeypatch.setattr(modulo.correzione, "sistema_descrizioni", correzione_rotta)
+
+    risposta = browser.post("/sistema", json={"descrizioni": ["posa piato docia"]})
+    assert risposta.status_code == 503
+    assert risposta.get_json() == {"errore": "manca la chiave"}
+
+
+def test_sistema_il_testo_con_dati_storti(browser):
+    for storto in ({"descrizioni": "ciao"}, {"descrizioni": [1, 2]}, [1], {}):
+        assert browser.post("/sistema", json=storto).status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# La password d'accesso
+# ---------------------------------------------------------------------------
+def test_senza_password_non_si_vede_niente(fuori):
+    risposta = fuori.get("/")
+    assert risposta.status_code == 302 and risposta.headers["Location"] == "/accesso"   # 302 = "vai a quest'altro indirizzo"
+    assert "Spettabile" not in risposta.get_data(as_text=True)
+
+
+def test_senza_password_i_pulsanti_non_funzionano(fuori, monkeypatch):
+    def non_deve_succedere(descrizioni):
+        raise AssertionError("La correzione non doveva partire")
+    monkeypatch.setattr(modulo.correzione, "sistema_descrizioni", non_deve_succedere)
+    for indirizzo in ("/anteprima", "/crea", "/sistema"):
+        risposta = fuori.post(indirizzo, json=modulo_compilato())
+        assert risposta.status_code == 401
+    assert fuori.get("/scarica/qualcosa.docx").status_code == 302
+    assert not (modulo.CARTELLA_USCITA).exists()            # Nessun file creato
+
+
+def test_password_sbagliata_e_poi_giusta(fuori):
+    risposta = fuori.post("/accesso", data={"password": "sbagliata"})
+    assert risposta.status_code == 401 and "Password sbagliata" in risposta.get_data(as_text=True)
+    assert fuori.get("/").status_code == 302
+
+    risposta = fuori.post("/accesso", data={"password": "password-di-prova"})
+    assert risposta.status_code == 302 and risposta.headers["Location"] == "/"
+    assert "Spettabile" in fuori.get("/").get_data(as_text=True)
+
+
+def test_troppi_tentativi_bloccano_anche_la_password_giusta(fuori):
+    for _ in range(modulo.TENTATIVI_MASSIMI):
+        fuori.post("/accesso", data={"password": "sbagliata"})
+    risposta = fuori.post("/accesso", data={"password": "password-di-prova"})
+    assert risposta.status_code == 429 and "Troppi tentativi" in risposta.get_data(as_text=True)
+    assert fuori.get("/").status_code == 302
+
+
+def test_il_blocco_finisce_dopo_dieci_minuti(fuori, monkeypatch):
+    for _ in range(modulo.TENTATIVI_MASSIMI):
+        fuori.post("/accesso", data={"password": "sbagliata"})
+    tra_undici_minuti = modulo.time.time() + 11 * 60
+    monkeypatch.setattr(modulo.time, "time", lambda: tra_undici_minuti)     # Sposta l'orologio in avanti invece di aspettare davvero
+    assert fuori.post("/accesso", data={"password": "password-di-prova"}).status_code == 302
+
+
+def test_pagina_chiusa_se_la_password_non_e_impostata(fuori, monkeypatch, tmp_path):
+    monkeypatch.setattr(modulo.correzione, "FILE_CHIAVE", tmp_path / "non_esiste")
+    for password in ("", "corta"):                          # Mancante, oppure sotto gli 8 caratteri
+        monkeypatch.setenv("PASSWORD_PAGINA", password)
+        risposta = fuori.get("/accesso")
+        assert risposta.status_code == 503 and "non è stata ancora scelta una password" in risposta.get_data(as_text=True)
+        assert fuori.post("/accesso", data={"password": password}).status_code == 503
+        assert fuori.get("/").status_code == 302
+
+
+def test_esci(browser):
+    assert browser.get("/").status_code == 200
+    browser.get("/esci")
+    assert browser.get("/").status_code == 302
+
+
+def test_il_biglietto_viaggia_solo_su_https():
+    # Questo test non usa il finto browser, quindi vede il valore vero: online deve restare True
+    assert modulo.app.config["SESSION_COOKIE_SECURE"] is True
+
+
+# ---------------------------------------------------------------------------
+# I dati dell'impresa
+# ---------------------------------------------------------------------------
+def test_avviso_se_nel_word_ci_sono_i_dati_di_esempio(browser):
+    risposta = browser.post("/crea", json=modulo_compilato()).get_json()
+    assert risposta["avvisi"] == ["Nel documento ci sono i dati dell'impresa di esempio, non quelli veri."]
+
+
+def test_impresa_presa_dalla_variabile(browser, monkeypatch):
+    vera = dict(modulo.gp.leggi_json(modulo.gp.IMPRESA_ESEMPIO))
+    monkeypatch.setenv("IMPRESA_JSON", json.dumps(vera))
+    assert modulo.leggi_impresa() == (vera, False)
+    assert browser.post("/crea", json=modulo_compilato()).get_json()["avvisi"] == []
+
+
+def test_impresa_scritta_male_nella_variabile(browser, monkeypatch):
+    monkeypatch.setenv("IMPRESA_JSON", "{non è json")
+    risposta = browser.post("/crea", json=modulo_compilato())
+    assert risposta.status_code == 400 and "impresa" in risposta.get_json()["errori"][0]
