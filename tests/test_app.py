@@ -131,7 +131,7 @@ def test_crea_il_word_e_salva_i_dati(browser, tmp_path):
     assert dati["bozza"] is False
     assert (tmp_path / "output" / "de_luca_srl_rifacimento_bagno.docx").exists()
     assert (tmp_path / "archivio" / "de_luca_srl_rifacimento_bagno.json").exists()
-    assert browser.get("/scarica/" + dati["file"]).status_code == 200
+    assert browser.get("/scarica").status_code == 200
 
 
 def test_crea_due_volte_non_sovrascrive(browser):
@@ -267,7 +267,7 @@ def test_senza_password_i_pulsanti_non_funzionano(fuori, monkeypatch):
     for indirizzo in ("/anteprima", "/crea", "/sistema"):
         risposta = fuori.post(indirizzo, json=modulo_compilato())
         assert risposta.status_code == 401
-    assert fuori.get("/scarica/qualcosa.docx").status_code == 302
+    assert fuori.get("/scarica").status_code == 302
     assert not (modulo.CARTELLA_USCITA).exists()            # Nessun file creato
 
 
@@ -337,3 +337,77 @@ def test_impresa_scritta_male_nella_variabile(browser, monkeypatch):
     monkeypatch.setenv("IMPRESA_JSON", "{non è json")
     risposta = browser.post("/crea", json=modulo_compilato())
     assert risposta.status_code == 400 and "impresa" in risposta.get_json()["errori"][0]
+
+
+# ---------------------------------------------------------------------------
+# Trovati con il controllo a tappeto prima di pubblicare
+# ---------------------------------------------------------------------------
+def voce_a_misura(**cambi):
+    voce = {"descrizione": "Posa", "misura": "misura", "quantita": "4", "unita": "mq", "prezzo": "100", "tipo_prezzo": "totale"}
+    voce.update(cambi)
+    return voce
+
+
+def test_quantita_zero_con_totale_non_manda_in_errore(browser):
+    # Capita mentre si scrive "0,5": per un attimo la quantità è 0 e il prezzo unitario sarebbe 100 diviso 0
+    for quantita in ("0", "0,", "0,0"):
+        modulo_ = modulo_compilato()
+        modulo_["voci"] = [voce_a_misura(quantita=quantita)]
+        risposta = browser.post("/anteprima", json=modulo_)
+        assert risposta.status_code == 200
+        assert any("maggiore di zero" in errore for errore in risposta.get_json()["errori"])
+        assert browser.post("/crea", json=modulo_).status_code == 400
+
+
+def test_numeri_enormi_sono_un_errore_spiegato(browser):
+    modulo_ = modulo_compilato()
+    modulo_["voci"] = [voce_a_misura(quantita="9" * 24, prezzo="9" * 24, tipo_prezzo="unitario")]
+    for indirizzo in ("/anteprima", "/crea"):
+        risposta = browser.post(indirizzo, json=modulo_)
+        assert risposta.status_code in (200, 400)
+        assert any("troppo grande" in errore for errore in risposta.get_json()["errori"])
+
+
+def test_luogo_fatto_solo_di_virgole(browser):
+    modulo_ = modulo_compilato()
+    modulo_["indirizzo"] = ",,,"
+    risposta = browser.post("/anteprima", json=modulo_)
+    assert risposta.status_code == 200 and "Manca: indirizzo" in risposta.get_json()["mancanze"]
+
+
+def test_titolo_lunghissimo(browser):
+    modulo_ = modulo_compilato()
+    modulo_["titolo"] = "lavoro " * 60
+    assert browser.post("/crea", json=modulo_).status_code == 200
+
+
+def test_caratteri_invisibili_vengono_tolti(browser):
+    modulo_ = modulo_compilato()
+    modulo_["cliente"] = "Mario\x00 Rossi"
+    modulo_["voci"][0]["descrizione"] = "Rimozione\x0b sanitari \ud83d"
+    preventivo, _ = leggi_modulo(modulo_)
+    assert preventivo["cliente"] == "Mario Rossi"
+    assert preventivo["voci"][0]["descrizione"] == "Rimozione sanitari"
+    assert browser.post("/crea", json=modulo_).status_code == 200
+
+
+def test_l_indirizzo_per_scaricare_non_contiene_il_nome_del_cliente(browser):
+    # Gli indirizzi visitati restano nei registri del server: il nome del file (cliente e lavoro) non deve comparirci
+    risposta = browser.post("/crea", json=modulo_compilato()).get_json()
+    assert risposta["file"] == "de_luca_srl_rifacimento_bagno.docx"
+    scaricato = browser.get("/scarica")
+    assert scaricato.status_code == 200
+    assert "de_luca_srl_rifacimento_bagno.docx" in scaricato.headers["Content-Disposition"]
+    assert scaricato.data[:2] == b"PK"                      # Un file Word è uno zip: comincia sempre con le lettere PK
+    assert browser.get("/scarica/de_luca_srl_rifacimento_bagno.docx").status_code == 404
+
+
+def test_scarica_senza_aver_creato_niente(browser):
+    assert browser.get("/scarica").status_code == 404
+
+
+def test_le_risposte_non_vanno_tenute_in_memoria_dal_browser(browser):
+    risposta = browser.get("/")
+    assert risposta.headers["Cache-Control"] == "no-store"
+    assert risposta.headers["X-Frame-Options"] == "DENY"
+    assert "noindex" in risposta.headers["X-Robots-Tag"]

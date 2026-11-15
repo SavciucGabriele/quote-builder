@@ -118,6 +118,7 @@ MESI = {"gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio",
         "agosto", "settembre", "ottobre", "novembre", "dicembre"}
 PAROLA_NUMERO = re.compile(r"\b(?:n|nr|numero|civico)\b[.°]*\s*(?=\d)", re.IGNORECASE)   # "n. 3", "n°3", "civico 3": la parola prima del numero, che si toglie
 PAROLE_PROVINCIA = {"provincia", "prov"}                # "provincia di Milano": parole che annunciano la provincia, da togliere
+PAROLE_INTERNO = {"int", "interno", "scala", "sc", "piano", "palazzina", "pal", "edificio", "lotto", "torre", "box"}   # "scala B", "int. 4": precisano l'indirizzo dopo il civico e restano attaccate alla via
 
 # Le province italiane e la loro sigla. I nomi sono in minuscolo perché il
 # confronto si fa in minuscolo. Per alcune c'è più di un modo di scriverle.
@@ -160,6 +161,8 @@ def _maiuscola(parola, prima):
         return parola.upper().replace("BIS", "bis").replace("TER", "ter")   # Numeri civici e CAP: '33a' -> '33A', '12bis' resta '12bis', '20063' resta uguale
     if minuscola in ("bis", "ter"):
         return minuscola                                # '12 bis': resta minuscolo
+    if not prima and minuscola.rstrip(".") in PAROLE_INTERNO:
+        return minuscola                                # 'Scala B' -> 'scala B', 'INT. 4' -> 'int. 4'
     if "/" in parola:
         return parola                                   # Abbreviazioni con la barra ('s/N'): le lascio come sono scritte
     if not prima and minuscola in PREPOSIZIONI:
@@ -240,6 +243,8 @@ def sistema_indirizzo(testo):
     testo = testo.replace("’", "'")                             # L'apostrofo "curvo" dei telefoni diventa quello normale
     testo = PAROLA_NUMERO.sub("", testo)                        # 'via Roma n. 3' -> 'via Roma 3'
     pezzi = [pezzo.split() for pezzo in testo.split(",") if pezzo.strip()]     # Divide alle virgole, poi ogni pezzo in parole: 'via Roma 1, milano' -> [['via', 'Roma', '1'], ['milano']]
+    if not pezzi:
+        return ""                                               # Il testo era fatto solo di virgole o di "n.": non c'è nessun indirizzo
     prima_parte = pezzi[0]
     dopo = [parola for pezzo in pezzi[1:] for parola in pezzo]  # Le parole di tutti i pezzi dopo la prima virgola, in una lista sola
 
@@ -253,6 +258,10 @@ def sistema_indirizzo(testo):
         via, resto = prima_parte, dopo                          # Niente civico, ma c'è una virgola che dice dove finisce la via
     else:
         return _maiuscole(prima_parte)                          # Né civico né virgole: non so dove finisce la via, sistemo solo le maiuscole
+
+    # 'via Roma 10 scala B Milano': "scala B" precisa l'indirizzo, non è il comune. Lo sposto dalla parte della via, insieme alla parola che lo segue.
+    while len(resto) >= 2 and resto[0].lower().rstrip(".") in PAROLE_INTERNO:
+        via, resto = via + resto[:2], resto[2:]
 
     # 'provincia di milano' -> 'milano': toglie "provincia" e il "di" che la segue
     resto = [parola for numero, parola in enumerate(resto)
@@ -294,3 +303,20 @@ def sistema_unita(testo):
     """
     pulito = re.sub(r"\s+", " ", testo.lower().replace(".", "")).strip()    # Minuscolo, senza punti ("mt." -> "mt"), spazi doppi ridotti a uno
     return SIGLA_UNITA.get(pulito, pulito)                                  # .get(x, y): la sigla se la conosce, altrimenti lo stesso testo
+
+
+# ---------------------------------------------------------------------------
+# Caratteri invisibili
+# ---------------------------------------------------------------------------
+# I caratteri "di controllo" (quelli con numero da 0 a 31, tranne a capo e tabulazione) e le "mezze emoji"
+# non si vedono, ma un file Word non li può contenere: arrivano a volte con un copia-incolla o un testo tagliato male.
+CARATTERI_INVISIBILI = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\ud800-\udfff\ufffe\uffff]")
+
+
+def pulisci_testo(testo):
+    """Toglie i caratteri invisibili che Word non accetta: 'Mario\x00 Rossi' -> 'Mario Rossi'.
+
+    Lettere accentate, emoji, a capo e tabulazioni restano come sono.
+    """
+    return CARATTERI_INVISIBILI.sub("", testo)
+

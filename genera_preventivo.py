@@ -45,6 +45,8 @@ CAMPI_VOCE = ("descrizione", "importo", "quantita", "unita", "prezzo_unitario", 
 CAMPI_IMPRESA = ("nome", "indirizzo", "telefono", "partita_iva")               # i campi che devono esserci nel file dell'impresa
 DA_DEFINIRE = "da definire"         # il testo che compare, evidenziato, al posto di un dato mancante
 CENTESIMI = Decimal("0.01")         # serve per arrotondare a due decimali (vedi importo_voce)
+NUMERO_MASSIMO = 1_000_000_000      # un miliardo: oltre, è di sicuro un errore di battitura, e i conti esatti hanno un limite di cifre
+LUNGHEZZA_MASSIMA_PROPRIETA = 255   # Word non accetta più di 255 caratteri nelle "proprietà" del file (titolo, autore)
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +225,12 @@ def controlla_voce(numero, voce):
     if errori:
         return errori, mancanze     # Con dati scritti male i controlli qui sotto non avrebbero senso: mi fermo a questi
 
+    for campo in ("importo", "quantita", "prezzo_unitario"):
+        if not manca(voce, campo) and abs(voce[campo]) >= NUMERO_MASSIMO:      # abs toglie il segno: vale anche per uno sconto enorme scritto col meno
+            errori.append(f'{nome}: "{campo}" è un numero troppo grande, controlla che non ci siano cifre in più')
+    if errori:
+        return errori, mancanze     # Con numeri così i conti qui sotto non si possono fare
+
     for campo in ("importo", "prezzo_unitario"):
         if not manca(voce, campo) and decimale(voce[campo]).as_tuple().exponent < -2:   # exponent conta le cifre dopo la virgola, in negativo: 10.005 -> -3, cioè tre decimali
             errori.append(f'{nome}: "{campo}" ha più di due decimali')
@@ -384,8 +392,8 @@ def componi_documento(preventivo, impresa, bozza):
     e la pagina web. Tutti e due le passano un preventivo già controllato.
     """
     documento = Document(MODELLO)
-    documento.core_properties.title = titolo_completo(preventivo)   # Il titolo nelle proprietà del file (quello che alcuni programmi mostrano al posto del nome)
-    documento.core_properties.author = impresa["nome"]
+    documento.core_properties.title = titolo_completo(preventivo)[:LUNGHEZZA_MASSIMA_PROPRIETA]   # Il titolo nelle proprietà del file (quello che alcuni programmi mostrano al posto del nome). [:255] lo accorcia se è lunghissimo: nella tabella resta intero
+    documento.core_properties.author = impresa["nome"][:LUNGHEZZA_MASSIMA_PROPRIETA]
 
     # 1. Intestazione e piè di pagina
     sostituisci_segnaposto(documento, {

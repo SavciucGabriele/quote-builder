@@ -323,7 +323,7 @@
         if (dati.bozza) messaggi.appendChild(riquadro("mancanze", "Creato come BOZZA. Mancano ancora:", dati.mancanze));
         else messaggi.appendChild(riquadro("fatto", "Preventivo creato: " + dati.file + " (" + dati.totale + ")", []));
         if (dati.avvisi.length) messaggi.appendChild(riquadro("mancanze", "Attenzione:", dati.avvisi));
-        window.location = "/scarica/" + encodeURIComponent(dati.file);
+        window.location = "/scarica";                     // Quale file mandare lo sa Python: il nome non passa dall'indirizzo
       }
     } finally {
       pulsante.disabled = false;                        // "finally" gira sempre, anche se qualcosa va storto: il pulsante non resta bloccato

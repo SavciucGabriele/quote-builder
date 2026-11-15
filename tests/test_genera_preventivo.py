@@ -270,3 +270,28 @@ def test_data_mancante_e_una_mancanza():
                   "voci": [{"descrizione": "Pulizia", "importo": 300}]}
     errori, mancanze = controlla_preventivo(preventivo)
     assert errori == [] and mancanze == ["Manca: data"]
+
+
+# ---------------------------------------------------------------------------
+# Trovati con il controllo a tappeto prima di pubblicare
+# ---------------------------------------------------------------------------
+def test_numero_troppo_grande_e_un_errore():
+    # Con numeri di 20 e più cifre i conti esatti non si possono fare: meglio dirlo che andare in crash
+    for campo in ("importo", "prezzo_unitario", "quantita"):
+        voce = {"descrizione": "Posa", "unita": "mq", campo: 10 ** 24}
+        errori, _ = controlla_voce(1, voce)
+        assert any("troppo grande" in errore for errore in errori), campo
+
+
+def test_un_miliardo_meno_un_centesimo_va_ancora_bene():
+    errori, _ = controlla_voce(1, {"descrizione": "Posa", "importo": 999999999.99})
+    assert errori == []
+
+
+def test_titolo_lunghissimo_non_blocca_il_documento():
+    from genera_preventivo import componi_documento, leggi_json, IMPRESA_ESEMPIO
+    preventivo = preventivo_valido()
+    preventivo["titolo"] = "lavoro " * 60                   # 420 caratteri: più dei 255 che Word accetta nelle proprietà del file
+    documento, _ = componi_documento(preventivo, leggi_json(IMPRESA_ESEMPIO), bozza=False)
+    assert len(documento.core_properties.title) <= 255
+    assert preventivo["titolo"] in documento.tables[0].rows[1].cells[1].text     # Nella tabella il titolo resta intero

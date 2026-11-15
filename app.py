@@ -29,7 +29,7 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 
 import correzione
 import genera_preventivo as gp      # "as gp" è un soprannome: per usare euro() si scrive gp.euro()
-from pulizia import leggi_prezzo, leggi_quantita, sistema_indirizzo, sistema_unita
+from pulizia import leggi_prezzo, leggi_quantita, pulisci_testo, sistema_indirizzo, sistema_unita
 
 CARTELLA_USCITA = gp.CARTELLA_USCITA                                # output/: dove finiscono i Word
 CARTELLA_ARCHIVIO = gp.CARTELLA / "data" / "raw" / "preventivi"     # Dove si salvano i dati di ogni preventivo creato (resta solo sul Mac)
@@ -181,6 +181,14 @@ def frase_per_unita(unita):
     return FRASI_PER_UNITA.get(unita) or f"per unità ({unita})"
 
 
+def testo_casella(dati, campo):
+    """Il testo di una casella, pronto da usare: senza spazi intorno e senza caratteri invisibili. "" se la casella manca.
+
+    Esempio: testo_casella({"cliente": "  Mario\x00 Rossi "}, "cliente") -> "Mario Rossi"
+    """
+    return pulisci_testo(str(dati.get(campo) or "")).strip()
+
+
 def leggi_voce(numero, dati):
     """Trasforma una voce scritta nella pagina in una voce del preventivo.
 
@@ -193,7 +201,7 @@ def leggi_voce(numero, dati):
     if not isinstance(dati, dict):      # Un dato che non è un insieme di caselle: lo salto invece di andare in errore
         return None, []
     a_misura = dati.get("misura") == "misura"
-    testo = {campo: str(dati.get(campo) or "").strip() for campo in ("descrizione", "quantita", "unita", "prezzo")}     # I testi delle caselle senza spazi intorno; una casella mancante diventa ""
+    testo = {campo: testo_casella(dati, campo) for campo in ("descrizione", "quantita", "unita", "prezzo")}     # I testi delle caselle senza spazi intorno; una casella mancante diventa ""
     if not a_misura:
         testo["quantita"] = testo["unita"] = ""     # Quantità e unità sono nascoste nelle voci a corpo: se c'è qualcosa di scritto è un residuo, non va contato
     if not any(testo.values()):         # any(...) è True se almeno una casella contiene qualcosa
@@ -236,10 +244,10 @@ def leggi_modulo(dati):
         dati = {}
     preventivo = {
         "tipo": dati.get("tipo") or "preventivo",
-        "cliente": str(dati.get("cliente") or "").strip(),
-        "indirizzo": sistema_indirizzo(str(dati.get("indirizzo") or "")),
-        "titolo": str(dati.get("titolo") or "").strip(),
-        "data": str(dati.get("data") or "").strip(),
+        "cliente": testo_casella(dati, "cliente"),
+        "indirizzo": sistema_indirizzo(testo_casella(dati, "indirizzo")),
+        "titolo": testo_casella(dati, "titolo"),
+        "data": testo_casella(dati, "data"),
         "voci": [],
     }
     problemi = []
@@ -250,6 +258,19 @@ def leggi_modulo(dati):
             preventivo["voci"].append(voce)
             problemi += problemi_voce
     return preventivo, problemi
+
+
+def conti_possibili(voce):
+    """True se con i numeri della voce si possono fare i conti.
+
+    False se c'è un valore che non è un numero, un numero enorme, oppure una quantità a zero o negativa:
+    con la quantità a zero, per ricavare il prezzo per unità bisognerebbe dividere per zero.
+    Capita anche solo per un attimo, mentre si scrive "0,5" e la casella contiene ancora "0".
+    """
+    for campo in ("importo", "quantita", "prezzo_unitario"):
+        if campo in voce and (not gp.e_un_numero(voce[campo]) or abs(voce[campo]) >= gp.NUMERO_MASSIMO):
+            return False
+    return voce.get("quantita", 1) > 0         # Se la quantità non c'è (voce a corpo) vale 1, quindi va bene
 
 
 def riassunto(preventivo, problemi):
@@ -265,12 +286,14 @@ def riassunto(preventivo, problemi):
 
     righe, totale = [], gp.Decimal("0")
     for voce in preventivo["voci"]:
+        riga = {"prezzo": "", "unita": voce.get("unita", ""), "dettaglio": ""}
+        if not conti_possibili(voce):
+            righe.append(riga)                  # Quantità a zero o numeri enormi: niente conti per questa voce (l'errore è già nell'elenco)
+            continue
         prezzo = voce.get("importo", voce.get("prezzo_unitario"))  # Il prezzo scritto, qualunque dei due sia; None se non c'è
-        riga = {"prezzo": gp.euro(prezzo) if gp.e_un_numero(prezzo) else "", "unita": voce.get("unita", ""), "dettaglio": ""}
-        try:
-            importo = gp.importo_voce(voce)     # Il totale della voce, oppure None se manca qualcosa
-        except Exception:                       # Con dati scritti male il conto può fallire: in quel caso non mostro il dettaglio (l'errore è già nell'elenco)
-            importo = None
+        if prezzo is not None:
+            riga["prezzo"] = gp.euro(prezzo)
+        importo = gp.importo_voce(voce)         # Il totale della voce, oppure None se manca qualcosa
         if importo is not None:
             totale += importo
             riga["dettaglio"] = "Totale voce " + gp.euro(importo)
@@ -341,6 +364,7 @@ def crea():
     dati = json.dumps(preventivo, ensure_ascii=False, indent=2)     # ensure_ascii=False lascia le lettere accentate come sono
     (CARTELLA_ARCHIVIO / (uscita.stem + ".json")).write_text(dati + "\n", encoding="utf-8")    # Stesso nome del Word, ma con .json
 
+    session["da_scaricare"] = uscita.name   # Il nome del file viaggia nel "biglietto" di chi è entrato, non nell'indirizzo: vedi scarica()
     avvisi = ["Nel documento ci sono i dati dell'impresa di esempio, non quelli veri."] if impresa_di_esempio else []
     return jsonify({"file": uscita.name, "bozza": bozza, "mancanze": mancanze, "avvisi": avvisi, "totale": gp.euro(totale) + " + IVA"})
 
@@ -363,10 +387,28 @@ def sistema():
         return jsonify({"errore": str(errore)}), 503        # 503 vuol dire "servizio non disponibile adesso": il resto della pagina continua a funzionare
 
 
-@app.route("/scarica/<nome>")
-def scarica(nome):
-    """Manda al browser un Word già creato. <nome> è il pezzo di indirizzo dopo /scarica/."""
-    return send_from_directory(CARTELLA_USCITA, nome, as_attachment=True)   # send_from_directory accetta solo file dentro quella cartella; as_attachment lo fa scaricare
+@app.route("/scarica")
+def scarica():
+    """Manda al browser l'ultimo Word creato da chi lo chiede.
+
+    L'indirizzo è sempre e solo /scarica. Prima conteneva il nome del file (/scarica/mario_rossi_bagno.docx),
+    ma i server annotano gli indirizzi visitati nei loro registri, e lì sarebbero rimasti cliente e lavoro.
+    """
+    nome = session.get("da_scaricare")
+    if not nome or not (CARTELLA_USCITA / nome).is_file():
+        return "Il documento non c'è più. Torna alla pagina e premi di nuovo \"Crea il preventivo\".", 404
+    return send_from_directory(CARTELLA_USCITA, nome, as_attachment=True)   # send_from_directory accetta solo file dentro quella cartella; as_attachment lo fa scaricare con il suo nome
+
+
+@app.after_request
+def intestazioni_di_sicurezza(risposta):
+    """Gira dopo ogni richiesta: aggiunge alla risposta alcune istruzioni per il browser."""
+    risposta.headers["Cache-Control"] = "no-store"              # Non tenere copie: né della pagina, né dei Word scaricati
+    risposta.headers["X-Frame-Options"] = "DENY"                # La pagina non può essere mostrata dentro un altro sito (un trucco per far premere pulsanti senza accorgersene)
+    risposta.headers["X-Content-Type-Options"] = "nosniff"      # Il browser deve fidarsi del tipo di file dichiarato, senza indovinare
+    risposta.headers["Referrer-Policy"] = "no-referrer"         # Uscendo verso un altro sito non gli viene detto da dove si arriva
+    risposta.headers["X-Robots-Tag"] = "noindex, nofollow"      # I motori di ricerca non devono elencare questa pagina
+    return risposta
 
 
 if __name__ == "__main__":

@@ -175,3 +175,35 @@ def test_unita_sconosciuta_resta_com_e_ma_in_minuscolo():
     assert sistema_unita("Kg") == "kg"
     assert sistema_unita("Giorni") == "giorni"
     assert sistema_unita("") == ""
+
+
+# ---------------------------------------------------------------------------
+# Trovati con il controllo a tappeto prima di pubblicare
+# ---------------------------------------------------------------------------
+from pulizia import pulisci_testo
+
+
+def test_indirizzo_fatto_solo_di_virgole():
+    assert sistema_indirizzo(",,,") == ""
+    assert sistema_indirizzo(" , ") == ""
+
+
+def test_pulisci_testo_toglie_i_caratteri_invisibili():
+    assert pulisci_testo("Mario\x00 Rossi\x0b") == "Mario Rossi"
+    assert pulisci_testo("Posa \ud83d") == "Posa "                  # Mezza emoji (capita se un testo viene tagliato a metà)
+    assert pulisci_testo("riga 1\nriga 2\tfine") == "riga 1\nriga 2\tfine"    # A capo e tabulazione sono caratteri normali: restano
+    assert pulisci_testo("Ștefan è qui 😀") == "Ștefan è qui 😀"    # Accenti ed emoji intere restano
+
+
+def test_indirizzo_con_interno_e_scala():
+    # Prima "scala B" veniva scambiato per il comune, e Milano spariva diventando solo la sigla MI
+    assert sistema_indirizzo("via roma 10 int. 4 scala b milano") == "Via Roma 10 int. 4 scala B, Milano"
+    assert sistema_indirizzo("via roma 10 scala b milano") == "Via Roma 10 scala B, Milano"
+    assert sistema_indirizzo("Via Roma 10, interno 4, Milano") == "Via Roma 10 interno 4, Milano"
+    assert sistema_indirizzo("via roma 10 palazzina c cernusco sul naviglio mi") == "Via Roma 10 palazzina C, Cernusco sul Naviglio, MI"
+
+
+def test_indirizzo_gia_sistemato_non_cambia_piu():
+    # Chi corregge a mano un indirizzo già sistemato non deve vederselo cambiare di nuovo
+    for indirizzo in ("Via Roma 10 int. 4 scala B, Milano", "Via Ponte 33, Cernusco sul Naviglio, MI", "Viale 25 Aprile 4, Monza, MB"):
+        assert sistema_indirizzo(indirizzo) == indirizzo

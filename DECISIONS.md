@@ -135,3 +135,9 @@ titolare, e un prezzo arrotondato non farebbe tornare il conto al cliente.
 - Dopo l'accesso si resta dentro 30 giorni. Dopo 8 password sbagliate in 10 minuti la pagina si blocca per 10 minuti.
 - Online i dati dell'impresa arriveranno da un'impostazione segreta (IMPRESA_JSON), perché data/raw non è su GitHub.
 - Se nel Word finiscono i dati dell'impresa di esempio, la pagina avvisa.
+
+## 2026-11-15 — Controllo prima della pubblicazione
+- Controllata tutta la storia del repository: nessun segreto e nessun dato reale.
+- Provate migliaia di richieste con valori strani: trovati e corretti sei casi in cui il programma andava in errore (quantità a zero con prezzo totale, indirizzi con scala e interno, luogo di sole virgole, titolo lunghissimo, caratteri invisibili, numeri enormi).
+- L'indirizzo per scaricare il Word non contiene più il nome del cliente: restava nei registri del server.
+- La pagina chiede al browser di non tenere copie e ai motori di ricerca di non elencarla.
