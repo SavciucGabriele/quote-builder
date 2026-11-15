@@ -1,78 +1,72 @@
 # preventivi-ai
 
-Una pagina web che aiuta una piccola impresa edile a preparare preventivi e
-consuntivi: si compilano (o si dettano) poche caselle e il programma fa i
-conti, sistema prezzi e indirizzi, corregge l'italiano e crea il documento
-Word con l'impaginazione dell'impresa.
+A web page that helps a small construction company prepare quotes
+(*preventivi*) and final statements of work (*consuntivi*). You fill in (or
+dictate) a few fields, and the program does the math, cleans up prices and
+addresses, fixes the Italian and creates the Word document in the company's
+layout.
 
-*In English: a small Flask web app that lets a construction contractor fill in
-(or dictate) a quote from his phone and get a correctly formatted Word
-document. Exact decimal arithmetic, rule-based cleaning of prices and
-addresses, and an optional LLM step that only fixes spelling and grammar,
-with code-level guardrails. Code and comments are in Italian, because the
-user and the domain are.*
+The page, the documents and the code are in Italian, because the user and the
+domain are.
 
-<img src="docs/pagina.png" alt="La pagina vista dal telefono" width="300">
+<img src="docs/pagina.png" alt="The page seen on a phone" width="300">
 
-## Il problema
+## The problem
 
-L'ho fatto per aiutare mio padre, che ha una piccola impresa edile. 
-Lui sa che cosa mettere nel preventivo, ma scriverlo al computer e
-impaginarlo gli costa molto tempo, e i documenti restano arretrati. Nei
-documenti fatti a mano finiscono anche errori di somma e di formato.
+I built it to help my father, who runs a small construction company. He knows
+what goes into a quote, but typing it up and formatting it on a computer takes
+him a long time, so documents pile up. Documents made by hand also end up with
+sum and formatting errors.
 
-Lo strumento è in uso: il primo preventivo vero, sedici voci, è stato
-compilato in circa cinque minuti.
+The tool is in use: the first real quote, sixteen items, was filled in in about
+five minutes.
 
-## Come funziona
+## How it works
 
-1. **Si compila la pagina.** Cliente, data, luogo, lavoro e poi le voci. Ogni
-   casella si può scrivere o dettare con il microfono della tastiera.
-2. **Il codice sistema e controlla.** `593€` diventa `€ 593,00`,
-   `via ponte 33 robecco sul naviglio milano` diventa
-   `Via Ponte 33, Robecco sul Naviglio, MI`. Il totale si aggiorna mentre si
-   scrive.
-3. **Se serve, si corregge l'italiano.** Un pulsante manda le sole descrizioni
-   dei lavori a un modello linguistico (Gemini), che corregge ortografia e
-   grammatica. Sotto ogni testo cambiato resta quello di prima, e si può
-   tornare indietro.
-4. **Si scarica il Word.** Se manca un dato il documento esce come BOZZA, con
-   le caselle da completare evidenziate in giallo.
+1. **Fill in the page.** Client, date, site, job, then the line items. Every
+   field can be typed or dictated with the keyboard's microphone.
+2. **The code cleans up and checks.** `593€` becomes `€ 593,00`, and
+   `via ponte 33 robecco sul naviglio milano` becomes
+   `Via Ponte 33, Robecco sul Naviglio, MI`. The total updates while you type.
+3. **If needed, fix the Italian.** A button sends only the job descriptions to
+   a language model (Gemini), which corrects spelling and grammar. Under each
+   changed text the original stays visible, and you can switch back to it.
+4. **Download the Word file.** If something is missing, the document comes out
+   as a draft (BOZZA), with the fields still to complete highlighted in yellow.
 
-Una voce può essere a corpo, a misura con il prezzo per unità, oppure a misura
-con il totale già deciso.
+A line item can be a lump sum (*a corpo*), priced by measure with a unit price
+(*a misura*), or priced by measure with an agreed total.
 
-## Scelte di progetto
+## Design choices
 
-Le decisioni, con il motivo di ognuna, sono in [DECISIONS.md](DECISIONS.md),
-comprese quelle poi abbandonate. Le principali:
+Every decision, with its reason, is in [DECISIONS.md](DECISIONS.md) (in
+Italian), including the ones later abandoned. The main ones:
 
-- **I conti li fa il codice, mai il modello.** Importi e totali sono calcolati
-  in Python con decimali esatti (`Decimal`), perché con i numeri normali
-  alcuni prodotti sbagliavano di un centesimo.
-- **Il modello linguistico propone, il codice controlla.** Una correzione che
-  cambia un numero, o che allunga o accorcia troppo il testo, viene scartata:
-  in un preventivo ogni cosa scritta è un impegno con il cliente.
-- **Al modello arrivano solo le descrizioni dei lavori.** Nomi, indirizzi e
-  prezzi non lasciano il programma.
-- **Errori e mancanze sono cose diverse.** Un dato scritto male blocca il
-  documento, un dato che manca produce una bozza.
-- **Chiuso finché non è configurato.** Senza una password impostata la pagina
-  non si apre.
+- **The code does the math, never the model.** Amounts and totals are computed
+  in Python with exact decimals (`Decimal`), because with ordinary
+  floating-point numbers some products came out one cent off.
+- **The language model suggests, the code checks.** A correction that changes a
+  number, or makes the text much longer or shorter, is discarded: in a quote,
+  everything written is a commitment to the client.
+- **Only job descriptions reach the model.** Names, addresses and prices are
+  never sent to it.
+- **Errors and missing data are different things.** Badly written data blocks
+  the document; missing data produces a draft.
+- **Closed until configured.** If no password is set, the page does not open.
 
-## Com'è fatto
+## Structure
 
-| File | Cosa fa |
+| File | What it does |
 |---|---|
-| `genera_preventivo.py` | Controlla i dati, fa i conti e scrive il Word a partire dal modello |
-| `pulizia.py` | Sistema prezzi, quantità, indirizzi e unità di misura |
-| `correzione.py` | Chiede a Gemini di correggere le descrizioni e controlla la risposta |
-| `app.py` | La pagina web (Flask): accesso con password, anteprima, creazione del Word |
-| `templates/` | L'HTML della pagina e della schermata d'accesso |
-| `tests/` | I test automatici |
-| `examples/` | Un preventivo, una bozza e un'impresa inventati |
+| `genera_preventivo.py` | Checks the data, does the math and writes the Word file from the template |
+| `pulizia.py` | Cleans up prices, quantities, addresses and units of measure |
+| `correzione.py` | Asks Gemini to correct the descriptions and checks the answer |
+| `app.py` | The web page (Flask): password login, preview, Word creation |
+| `templates/` | HTML for the page and for the login screen |
+| `tests/` | Automated tests |
+| `examples/` | An invented quote, draft and company |
 
-## Come si prova
+## Running it
 
 ```bash
 python3 -m venv .venv
@@ -81,50 +75,51 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Nel file `.env` va scelta una password per la pagina (`PASSWORD_PAGINA`, almeno
-8 caratteri). La chiave di Gemini è facoltativa: senza, funziona tutto tranne
-la correzione dei testi. Poi:
+In `.env`, choose a password for the page (`PASSWORD_PAGINA`, at least 8
+characters). The Gemini key is optional: without it, everything works except
+the text correction. Then:
 
 ```bash
 python app.py
 ```
 
-e si apre `http://127.0.0.1:8000` nel browser. Si può anche creare un Word
-senza la pagina, da un file di dati:
+and open `http://127.0.0.1:8000` in the browser. You can also create a Word
+file without the page, from a data file:
 
 ```bash
 python genera_preventivo.py examples/preventivo_esempio.json
 ```
 
-I test si lanciano con `python -m pytest`. Nessuno usa internet o una chiave
-vera: al posto di Gemini c'è una risposta finta.
+Tests run with `python -m pytest`. None of them uses the internet or a real
+key: Gemini is replaced by a fake answer.
 
-Online il programma gira con Gunicorn (`gunicorn app:app`) e legge password,
-chiave e dati dell'impresa dalle variabili d'ambiente invece che dal file
-`.env`.
+Online, the program runs with Gunicorn (`gunicorn app:app`) and reads the
+password, the key and the company's data from environment variables instead of
+the `.env` file.
 
-## Limiti noti
+## Known limitations
 
-- Ricaricando la pagina si perde quello che è stato scritto.
-- Un preventivo già creato non si può riaprire per modificarlo.
-- Dalla pagina non si possono ancora inserire voci "in alternativa" e note,
-  che il generatore del Word invece gestisce.
-- La pulizia degli indirizzi segue delle regole: funziona con gli indirizzi
-  italiani più comuni, non con tutti.
-- La password è una sola, uguale per chi usa la pagina.
-- Online, con il piano gratuito di Render, la pagina si spegne dopo 15 minuti senza uso e la prima apertura richiede circa un minuto.
+- Reloading the page loses what has been typed.
+- A quote that has already been created can't be reopened for editing.
+- The page can't yet add alternative items (*in alternativa*) or notes, which
+  the Word generator already supports.
+- Address cleanup follows rules: it works for the most common Italian
+  addresses, not for all of them.
+- There is a single password, shared by everyone who uses the page.
+- Online, on Render's free plan, the page shuts down after 15 minutes without
+  use, and the first visit afterwards takes about a minute.
 
-## Dati
+## Data
 
-Il repository non contiene documenti, clienti o prezzi reali: gli esempi sono
-inventati. I dati veri dell'impresa e i preventivi stanno fuori da Git.
+The repository contains no real documents, clients or prices: the examples are
+invented. The company's real data and the quotes are kept outside Git.
 
-## Come è stato sviluppato
+## How it was built
 
-È il mio primo progetto di questo tipo. Il codice l'ha scritto un assistente
-AI (Claude), su mie indicazioni. La parte mia è stata capire il problema
-insieme a mio padre, che usa lo strumento; decidere che cosa doveva fare e
-che cosa no (le scelte e i motivi sono in [DECISIONS.md](DECISIONS.md));
-provare ogni versione con lui e riportare i problemi; metterlo online. I file
-Python sono commentati riga per riga perché l'obiettivo era anche capire
-tutto il codice.
+This is my first project of this kind. The code was written by an AI assistant
+(Claude), following my directions. My part was understanding the problem
+together with my father, who uses the tool; deciding what it should and
+shouldn't do (the choices and their reasons are in
+[DECISIONS.md](DECISIONS.md)); testing every version with him and reporting
+the problems; and putting it online. The Python files are commented line by
+line in Italian, because one of the goals was to understand all of the code.
