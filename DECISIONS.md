@@ -158,3 +158,4 @@ rounded price wouldn't add up for the client.
 - The decisions describe the owner more impersonally; it is still stated that the tool is for my father.
 - Removed `strumenti/estrai_chat.py`, left over from an abandoned path.
 - README and DECISIONS translated into English. The code, the page and the documents stay in Italian, because the user and the domain are.
+- Renamed the repository from preventivi-ai to quote-builder: the AI part is small on purpose, and the old name promised more than the project does.

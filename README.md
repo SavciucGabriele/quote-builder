@@ -1,4 +1,4 @@
-# preventivi-ai
+# quote-builder
 
 A web page that helps a small construction company prepare quotes
 (*preventivi*) and final statements of work (*consuntivi*). You fill in (or
