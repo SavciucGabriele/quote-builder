@@ -39,8 +39,8 @@ A line item can be a lump sum (*a corpo*), priced by measure with a unit price
 
 ## Design choices
 
-Every decision, with its reason, is in [DECISIONS.md](DECISIONS.md) (in
-Italian), including the ones later abandoned. The main ones:
+Every decision, with its reason, is in [DECISIONS.md](DECISIONS.md),
+including the ones later abandoned. The main ones:
 
 - **The code does the math, never the model.** Amounts and totals are computed
   in Python with exact decimals (`Decimal`), because with ordinary

@@ -1,153 +1,160 @@
-# Decisioni
-Lo strumento è nato per aiutare mio padre, che ha una piccola impresa edile:
-è lui "il titolare" di cui si parla qui sotto.
+# Decisions
 
-## 2026-11-09 — Niente listino prezzi fisso
-Le voci cambiano da un lavoro all'altro e il prezzo dipende dal cantiere.
-Il prezzo arriva dalla dettatura; se manca, il sistema propone quello di
-voci simili già usate, oppure lascia la casella vuota ed evidenziata.
+The tool was born to help my father, who runs a small construction company:
+he is "the owner" mentioned below.
 
-## 2026-11-09 — Un progetto, due percorsi
-Preventivi dettati ed Excel degli architetti stanno nello stesso progetto
-perché condividono l'archivio delle voci e dei prezzi.
+## 2026-11-09 — No fixed price list
+Items change from one job to the next, and the price depends on the site. The
+price comes from the dictation; if it is missing, the system suggests the price
+of similar items already used, or leaves the field empty and highlighted.
 
-## 2026-11-09 — I calcoli li fa il codice
-Il modello linguistico capisce cosa è stato dettato, ma importi, totali e
-IVA sono calcolati in Python, perché un modello può sbagliare i conti.
+## 2026-11-09 — One project, two paths
+Dictated quotes and the architects' Excel files live in the same project
+because they share the archive of items and prices.
 
-## 2026-11-10 — Il preventivo è un file di dati, il Word è solo l'uscita
-Ogni preventivo viene salvato come file di dati (cliente, indirizzo, voci,
-importi) e il documento Word viene rigenerato da quello. Così i totali sono
-sempre calcolati dal codice, l'impaginazione è sempre uguale e per una
-revisione basta modificare i dati. Gli stessi file fanno da archivio delle voci.
+## 2026-11-09 — The code does the calculations
+The language model understands what was dictated, but amounts, totals and VAT
+are calculated in Python, because a model can get the math wrong.
 
-## 2026-11-10 — Tanti ingressi, un solo passaggio
-Vocale, foto di appunti scritti a mano e testo digitato servono solo a
-ottenere un testo. Da lì in poi il percorso è unico: lo stesso passaggio
-trasforma il testo in voci e lo riscrive in italiano corretto. Aggiungere un
-nuovo ingresso non tocca il resto.
+## 2026-11-10 — The quote is a data file, the Word document is only the output
+Every quote is saved as a data file (client, address, items, amounts) and the
+Word document is regenerated from it. This way the totals are always
+calculated by the code, the layout is always the same, and a revision only
+requires editing the data. The same files act as the archive of items.
 
-## 2026-11-10 — Si parte dai preventivi propri, non dagli Excel dei tecnici
-Dall'analisi di 14 preventivi: modello unico, voci quasi sempre a corpo, ed è
-lì che nascono gli errori di somma e di formato. Gli Excel dei tecnici hanno
-impaginazioni diverse tra loro e vengono dopo.
+## 2026-11-10 — Many inputs, one path
+Voice, photos of handwritten notes and typed text only serve to get a text.
+From there on the path is the same: one step turns the text into items and
+rewrites it in correct Italian. Adding a new input doesn't touch the rest.
 
-## 2026-11-10 — Nei dati va il testo pulito, e il titolo senza il tipo
-Le descrizioni si salvano già corrette, perché il Word viene rigenerato dai
-dati e un refuso si ristamperebbe a ogni versione. Il titolo non contiene
-"Preventivo" o "Consuntivo": lo aggiunge lo script leggendo il campo "tipo".
+## 2026-11-10 — Start from our own quotes, not from the architects' Excel files
+From the analysis of 14 quotes: a single template, items almost always priced
+as a lump sum (*a corpo*), and that is where the sum and formatting errors come
+from. The architects' and engineers' Excel files have layouts that differ from
+one another, and they come later.
 
-## 2026-11-10 — Modello Word e dati dell'impresa fuori dal codice
-L'impaginazione sta in un file Word con segnaposto come {{cliente}}; lo script
-li riempie e aggiunge le righe della tabella. Per cambiare caratteri, larghezze
-o aggiungere un logo si modifica il modello in Word, senza toccare il codice.
-I dati dell'impresa stanno in un file a parte non pubblicato; se manca, lo
-script usa quelli di esempio.
+## 2026-11-10 — The data holds clean text, and the title without the type
+Descriptions are saved already corrected, because the Word document is
+regenerated from the data and a typo would be printed again in every version.
+The title doesn't contain "Preventivo" or "Consuntivo": the script adds it by
+reading the "tipo" field.
 
-## 2026-11-10 — Errori e mancanze sono due cose diverse
-Un file scritto male (campo sconosciuto, numero come testo, importo e quantità
-insieme) ferma lo script: è un errore di chi ha prodotto il file. Un dato che
-manca (prezzo, cliente) è normale quando si detta, quindi il documento viene
-creato lo stesso come BOZZA, con l'elenco di cosa completare. Quell'elenco
-servirà poi per fare le domande a chi ha dettato.
+## 2026-11-10 — Word template and company data outside the code
+The layout lives in a Word file with placeholders such as {{cliente}}; the
+script fills them in and adds the table rows. To change fonts or widths, or to
+add a logo, you edit the template in Word without touching the code. The
+company's data lives in a separate, unpublished file; if it is missing, the
+script uses the example data.
 
-## 2026-11-10 — I conti si fanno in decimali esatti
-I numeri normali di Python sono approssimati e sbagliavano di un centesimo in
-alcuni prodotti quantità per prezzo. Si usa Decimal, con il mezzo centesimo
-arrotondato in su.
+## 2026-11-10 — Errors and missing data are two different things
+A badly written file (unknown field, a number written as text, amount and
+quantity together) stops the script: it is a mistake by whoever produced the
+file. Missing data (price, client) is normal when dictating, so the document is
+created anyway as a draft (BOZZA), with the list of what to complete. That list
+will later be used to ask questions to whoever dictated.
 
-## 2026-11-10 — Lo script non sovrascrive e non corregge i testi
-Un documento già creato non viene mai sovrascritto (max.docx, max-2.docx...),
-così una correzione fatta a mano non va persa. Il titolo viene stampato com'è
-scritto nei dati, senza toccare maiuscole e minuscole.
+## 2026-11-10 — The math is done with exact decimals
+Python's ordinary numbers are approximate, and some quantity-times-price
+products came out one cent off. Decimal is used, with half a cent rounded up.
 
-## 2026-11-10 — L'ingresso è una conversazione, non una dettatura unica
-Quando si detta un preventivo si mandano messaggi brevi e si correggono i dati
-strada facendo (25 metri diventano 28). Lo strumento terrà un preventivo in
-bozza e lo aggiornerà a ogni messaggio: un dato nuovo sostituisce quello
-vecchio, e l'elenco delle cose mancanti diventa la lista delle domande.
+## 2026-11-10 — The script doesn't overwrite and doesn't correct texts
+A document that has already been created is never overwritten (max.docx,
+max-2.docx...), so a correction made by hand isn't lost. The title is printed
+exactly as written in the data, without changing upper and lower case.
 
-## 2026-11-10 — Le descrizioni non aggiungono lavorazioni
-Il modello può scrivere descrizioni complete, prendendo come esempio quelle già
-usate, ma non aggiunge lavorazioni non nominate: in un preventivo ogni cosa
-descritta è un impegno con il cliente. Prima del documento finale la bozza
-viene sempre mostrata.
+## 2026-11-10 — The input is a conversation, not a single dictation
+When dictating a quote, people send short messages and correct the data along
+the way (25 meters become 28). The tool will keep a draft quote and update it
+with each message: a new value replaces the old one, and the list of missing
+data becomes the list of questions.
 
-## 2026-11-10 — I prezzi li mette il titolare, lo strumento ricorda quelli passati
-I prezzi li decide il titolare, lavoro per lavoro. Lo strumento non stima
-prezzi: suggerisce quelli già usati per lavori simili, presi dall'archivio;
-se non ce ne sono, la casella resta "da definire".
+## 2026-11-10 — Descriptions don't add work
+The model can write complete descriptions, using the ones already used as
+examples, but it doesn't add work that wasn't mentioned: in a quote, everything
+described is a commitment to the client. The draft is always shown before the
+final document.
 
-## 2026-11-10 — Il valore principale è la scrittura professionale
-Scrivere le descrizioni è la parte che porta via più tempo, quindi la più
-utile è trasformare quello che il titolare dice in descrizioni da preventivo,
-nello stile dei suoi documenti, prendendoli come esempio e senza aggiungere
-lavorazioni non nominate.
+## 2026-11-10 — The owner sets the prices, the tool remembers past ones
+The owner decides the prices, job by job. The tool doesn't estimate prices: it
+suggests the ones already used for similar jobs, taken from the archive; if
+there are none, the field stays "da definire" (to be defined).
 
-## 2026-11-13 — Lo strumento propone, non inserisce
-Rivede la decisione del 10/11 sulle descrizioni. Nel documento entra solo ciò
-che il titolare ha detto o confermato. Lo strumento può però proporre: voci
-che ricorrono nei suoi preventivi (es. la copertura di protezione), prezzi già
-usati per lavori simili, dettagli tipici di una lavorazione. Ogni proposta va
-confermata prima di entrare nella bozza.
+## 2026-11-10 — The main value is professional writing
+Writing the descriptions is the part that takes the most time, so the most
+useful thing is turning what the owner says into quote descriptions, in the
+style of his documents, using them as examples and without adding work that
+wasn't mentioned.
 
-## 2026-11-13 — Una domanda alla volta, e solo se serve al documento
-A un elenco di domande si risponde spesso solo in parte, a una domanda
-singola quasi sempre. Lo strumento chiede una cosa per volta. Le misure si
-scrivono come vengono dette ("25 mt"), senza indovinare se sono metri
-lineari, quadri o cubi.
+## 2026-11-13 — The tool suggests, it doesn't insert
+Revises the decision of 10 November on descriptions. Only what the owner said
+or confirmed goes into the document. The tool can, however, suggest items that
+recur in his quotes (e.g. the protective covering), prices already used for
+similar jobs, and typical details of a kind of work. Every suggestion must be
+confirmed before it enters the draft.
 
-## 2026-11-13 — I messaggi possono essere comandi sulla bozza
-Oltre ad aggiungere o correggere un dato, un messaggio può chiedere una
-modifica a tutta la bozza ("aumenta di 20%"). Il modello riconosce il comando,
-il conto lo fa il codice.
+## 2026-11-13 — One question at a time, and only if the document needs it
+A list of questions often gets only a partial answer, while a single question
+almost always gets one. The tool asks one thing at a time. Measurements are
+written as they are said ("25 mt"), without guessing whether they are linear,
+square or cubic meters.
 
-## 2026-11-14 — Modulo guidato al posto della conversazione
-Deciso con il titolare. Prezzi e consigli restano fuori dal programma, che
-serve a compilare e impaginare. L'interfaccia è una pagina con i campi in
-ordine (spettabile, data, luogo, poi per ogni voce descrizione, a corpo o a
-metri, prezzo). Ogni campo si può dettare o scrivere a mano. Sostituisce le
-decisioni del 10/11 e del 13/11 su conversazione, domande e comandi sulla
-bozza.
+## 2026-11-13 — Messages can be commands on the draft
+Besides adding or correcting a value, a message can ask for a change to the
+whole draft ("aumenta di 20%", raise by 20%). The model recognizes the command,
+the code does the math.
 
-## 2026-11-14 — Chi tocca cosa
-Il nome del cliente resta esattamente come viene scritto. Prezzi e indirizzi
-li sistema il codice (da "593€" a "€ 593,00"), senza modello. Al modello
-linguistico arriva solo la descrizione dei lavori, e solo quando si chiede di
-sistemare il testo: nomi, indirizzi e prezzi non gli vengono mai mandati.
+## 2026-11-14 — A guided form instead of a conversation
+Decided with the owner. Prices and advice stay outside the program, which is
+for filling in and formatting. The interface is a page with the fields in order
+(client, date, site, then for each item the description, lump sum or by
+measure, and the price). Every field can be dictated or typed by hand. This
+replaces the decisions of 10 and 13 November on the conversation, the questions
+and the commands on the draft.
 
-## 2026-11-14 — Tre modi di scrivere una voce
-A corpo (solo il totale), a misura con il prezzo per unità (il totale lo
-calcola il codice), a misura con il totale già deciso (il costo unitario lo
-ricava il codice). Nel terzo caso, se la divisione non torna precisa al
-centesimo, il costo unitario non viene stampato: conta il totale deciso dal
-titolare, e un prezzo arrotondato non farebbe tornare il conto al cliente.
+## 2026-11-14 — Who touches what
+The client's name stays exactly as it is written. Prices and addresses are
+cleaned up by the code (from "593€" to "€ 593,00"), without a model. The
+language model only receives the description of the work, and only when asked
+to fix the text: names, addresses and prices are never sent to it.
 
-## 2026-11-15 — Correzione dell'italiano con Gemini
-- Prima prova vera: mio padre ha fatto un preventivo da 16 voci in circa 5 minuti.
-- Corretto: il totale si aggiornava solo uscendo dalla casella del prezzo. Ora si aggiorna mentre si scrive.
-- Nuovo pulsante "Sistema il testo": manda a Gemini solo le descrizioni, mai cliente, luogo o prezzi.
-- La correzione non è mai automatica: sotto ogni descrizione cambiata resta il testo di prima, con "Rimetti il mio testo".
-- Il codice scarta le correzioni che cambiano un numero o la lunghezza del testo: meglio un errore di italiano che un lavoro inventato.
-- Niente libreria di Google: la chiamata è fatta con la libreria standard, per avere meno dipendenze e capire ogni riga.
-- La chiave sta in .env (fuori da Git). Il modello è gemini-3.5-flash-lite e si può cambiare da .env.
+## 2026-11-14 — Three ways to write an item
+Lump sum (the total only), by measure with a unit price (the code calculates
+the total), by measure with an agreed total (the code derives the unit price).
+In the third case, if the division doesn't come out exact to the cent, the unit
+price is not printed: what counts is the total decided by the owner, and a
+rounded price wouldn't add up for the client.
 
-## 2026-11-15 — Password d'accesso, in vista della pagina online
-- Il pulsante "Sistema il testo" funziona con la chiave vera. Sul Mac servivano i certificati di Python ("Install Certificates.command"): ora quell'errore ha un messaggio suo.
-- La pagina si apre solo con una password (PASSWORD_PAGINA in .env). Senza password impostata resta chiusa: meglio chiusa per errore che aperta per errore.
-- Dopo l'accesso si resta dentro 30 giorni. Dopo 8 password sbagliate in 10 minuti la pagina si blocca per 10 minuti.
-- Online i dati dell'impresa arriveranno da un'impostazione segreta (IMPRESA_JSON), perché data/raw non è su GitHub.
-- Se nel Word finiscono i dati dell'impresa di esempio, la pagina avvisa.
+## 2026-11-15 — Correcting the Italian with Gemini
+- First real test: my father made a 16-item quote in about 5 minutes.
+- Fixed: the total only updated after leaving the price field. Now it updates while typing.
+- New "Sistema il testo" (fix the text) button: it sends only the descriptions to Gemini, never the client, the site or the prices.
+- The correction is never automatic: under each changed description the previous text stays visible, with a "Rimetti il mio testo" (restore my text) button.
+- The code discards corrections that change a number or the length of the text: better a mistake in Italian than invented work.
+- No Google library: the call is made with the standard library, to have fewer dependencies and understand every line.
+- The key lives in .env (outside Git). The model is gemini-3.5-flash-lite and can be changed from .env.
 
-## 2026-11-15 — Controllo prima della pubblicazione
-- Controllata tutta la storia del repository: nessun segreto e nessun dato reale.
-- Provate migliaia di richieste con valori strani: trovati e corretti sei casi in cui il programma andava in errore (quantità a zero con prezzo totale, indirizzi con scala e interno, luogo di sole virgole, titolo lunghissimo, caratteri invisibili, numeri enormi).
-- L'indirizzo per scaricare il Word non contiene più il nome del cliente: restava nei registri del server.
-- La pagina chiede al browser di non tenere copie e ai motori di ricerca di non elencarla.
+## 2026-11-15 — Access password, ahead of putting the page online
+- The "Sistema il testo" button works with the real key. On the Mac, Python's certificates were needed ("Install Certificates.command"): that error now has its own message.
+- The page only opens with a password (PASSWORD_PAGINA in .env). If no password is set it stays closed: better closed by mistake than open by mistake.
+- After logging in you stay logged in for 30 days. After 8 wrong passwords in 10 minutes, the page locks for 10 minutes.
+- Online, the company's data will come from a secret setting (IMPRESA_JSON), because data/raw is not on GitHub.
+- If the example company's data ends up in the Word document, the page shows a warning.
 
-## 2026-11-15 — Secondo controllo, con i suggerimenti di un altro modello
-- Fatto rileggere il codice a Gemini e verificato ogni suggerimento con una prova: sette applicati, cinque scartati (uno diceva che il modello in uso non esiste, ed era falso).
-- I dati mancanti sono evidenziati in giallo anche nell'intestazione del Word.
-- Una quantità sopra mille fa comparire un avviso: "1.250" con il punto viene letto come milleduecentocinquanta, e il programma non prova a indovinare.
-- Nel controllo delle correzioni "2.5" e "2,5" valgono come lo stesso numero, "1.250" e "1,250" no.
-- Regola imparata: un suggerimento si prova prima di applicarlo, da chiunque arrivi.
+## 2026-11-15 — Check before publishing
+- Checked the whole repository history: no secrets and no real data.
+- Tried thousands of requests with odd values: found and fixed six cases where the program crashed (zero quantity with a total price, addresses with staircase and apartment numbers, a site made only of commas, a very long title, invisible characters, huge numbers).
+- The link to download the Word document no longer contains the client's name, which ended up in the server logs.
+- The page asks the browser not to keep copies and search engines not to list it.
+
+## 2026-11-15 — Second check, with suggestions from another model
+- Had Gemini review the code and verified every suggestion with a test: seven applied, five rejected (one claimed that the model in use doesn't exist, which was false).
+- Missing data is highlighted in yellow in the Word header too.
+- A quantity over a thousand shows a warning: "1.250" with a dot is read as one thousand two hundred and fifty, and the program doesn't try to guess.
+- When checking corrections, "2.5" and "2,5" count as the same number, "1.250" and "1,250" don't.
+- Lesson learned: test a suggestion before applying it, whoever it comes from.
+
+## 2026-11-15 — Cleanup before publishing
+- The address examples now use an invented street in a different town.
+- The decisions describe the owner more impersonally; it is still stated that the tool is for my father.
+- Removed `strumenti/estrai_chat.py`, left over from an abandoned path.
+- README and DECISIONS translated into English. The code, the page and the documents stay in Italian, because the user and the domain are.
