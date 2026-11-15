@@ -28,7 +28,7 @@ le caselle da completare evidenziate.
 - [x] Dal file di dati al Word, con controlli, bozze e conti esatti
 - [x] Pulizia di prezzi e indirizzi
 - [x] Pagina per compilare il preventivo
-- [ ] Correzione dell'italiano nelle descrizioni
+- [x] Correzione dell'italiano nelle descrizioni
 - [ ] Pagina online, per telefono e computer
 
 ## Come si usa
