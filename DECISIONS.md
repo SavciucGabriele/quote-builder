@@ -159,3 +159,8 @@ rounded price wouldn't add up for the client.
 - Removed `strumenti/estrai_chat.py`, left over from an abandoned path.
 - README and DECISIONS translated into English. The code, the page and the documents stay in Italian, because the user and the domain are.
 - Renamed the repository from preventivi-ai to quote-builder: the AI part is small on purpose, and the old name promised more than the project does.
+
+## 2026-11-16 — Text correction switched off online
+- Google's terms require the paid tier when someone else uses the page in the EU, and the minimum prepaid credit is €30, non-refundable and valid for one year.
+- One correction costs less than half a cent, so for now the key has been removed from Render: the button shows that the correction is unavailable, everything else works.
+- To be reconsidered after a few weeks of real quotes: if descriptions come out with mistakes or take too long to write, buy the credit (no automatic reload) and put the key back.
