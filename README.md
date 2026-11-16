@@ -18,8 +18,8 @@ what goes into a quote, but typing it up and formatting it on a computer takes
 him a long time, so documents pile up. Documents made by hand also end up with
 sum and formatting errors.
 
-The tool is in use: the first real quote, sixteen items, was filled in in about
-five minutes.
+The tool is in use: **the first real quote, sixteen items, was filled in in about
+five minutes.**
 
 ## How it works
 
