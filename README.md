@@ -28,9 +28,10 @@ five minutes.**
 2. **The code cleans up and checks.** `593€` becomes `€ 593,00`, and
    `via ponte 33 robecco sul naviglio milano` becomes
    `Via Ponte 33, Robecco sul Naviglio, MI`. The total updates while you type.
-3. **If needed, fix the Italian.** A button sends only the job descriptions to
-   a language model (Gemini), which corrects spelling and grammar. Under each
-   changed text the original stays visible, and you can switch back to it.
+3. **If needed, fix the Italian.** If a Gemini key is configured, a button
+   sends only the job descriptions to a language model (Gemini), which
+   corrects spelling and grammar. Under each changed text the original stays
+   visible, and you can switch back to it.
 4. **Download the Word file.** If something is missing, the document comes out
    as a draft (BOZZA), with the fields still to complete highlighted in yellow.
 
@@ -108,6 +109,9 @@ the `.env` file.
 - There is a single password, shared by everyone who uses the page.
 - Online, on Render's free plan, the page shuts down after 15 minutes without
   use, and the first visit afterwards takes about a minute.
+- The text correction is currently switched off in the online version: Google's
+  terms require the paid tier when someone else uses the page, and it isn't
+  worth it yet (see [DECISIONS.md](DECISIONS.md)).
 
 ## Data
 
